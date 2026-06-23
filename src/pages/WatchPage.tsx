@@ -8,6 +8,18 @@ import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
 import EpisodeComments from '../components/EpisodeComments';
 
+const ELEMENT_COLORS: Record<number, string> = {
+  1: 'var(--element-water)',
+  2: 'var(--element-earth)',
+  3: 'var(--element-fire)',
+};
+
+const ELEMENT_LABELS: Record<number, string> = {
+  1: 'Su',
+  2: 'Toprak',
+  3: 'Ateş',
+};
+
 export default function WatchPage() {
   const { seasonNumber, episodeNumber } = useParams<{ seasonNumber: string; episodeNumber: string }>();
   const navigate = useNavigate();
@@ -26,6 +38,8 @@ export default function WatchPage() {
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
   const [selectedSeasonDrawer, setSelectedSeasonDrawer] = useState(season);
 
+  const elementColor = ELEMENT_COLORS[season];
+
   useEffect(() => {
     window.scrollTo(0, 0);
     setIsPlaylistOpen(false);
@@ -34,44 +48,54 @@ export default function WatchPage() {
 
   if (!episode) return <Navigate to="/" />;
 
-  // Büyüme/küçülme hızını ve dinamiğini Apple (Dynamic Island) gibi yapmak için özel bezier
-  const springTransition = "all 0.85s cubic-bezier(0.34, 1.56, 0.64, 1)";
+  const springTransition = 'all 0.85s cubic-bezier(0.34, 1.56, 0.64, 1)';
 
+  // ── Playlist Panel ──────────────────────────────────────────────────────────
   const PlaylistContent = ({ isDrawer = false }: { isDrawer?: boolean }) => (
-    <div className={`flex flex-col h-full ${!isDrawer && 'bg-[#0a0a0a] rounded-2xl border border-white/5 shadow-xl overflow-hidden'}`}>
-      <div className={`p-4 border-b border-white/5 shrink-0 flex flex-col gap-3 ${!isDrawer && 'bg-[#111]/50'}`}>
+    <div className="flex flex-col h-full" style={{ background: isDrawer ? 'var(--water-deep)' : 'var(--water-deep)', borderRadius: isDrawer ? 0 : '1rem', border: isDrawer ? 'none' : '1px solid var(--border-soft)', overflow: 'hidden' }}>
+
+      {/* Header */}
+      <div className="p-4 shrink-0 flex flex-col gap-3" style={{ borderBottom: '1px solid var(--border-soft)', background: 'rgba(7,13,26,0.4)' }}>
         {isDrawer && (
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-lg text-white tracking-tight">Oynatma Listesi</h3>
-            <button onClick={() => setIsPlaylistOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            <h3 className="avatar-title font-bold text-base tracking-wider" style={{ color: 'var(--parchment)' }}>Oynatma Listesi</h3>
+            <button onClick={() => setIsPlaylistOpen(false)} className="p-2 rounded-full transition-colors" style={{ color: 'var(--stone)' }}>
               <X size={20} />
             </button>
           </div>
         )}
+
         <div className="flex items-center gap-3">
+          {/* Season select */}
           <select
             value={selectedSeasonDrawer}
-            onChange={(e) => setSelectedSeasonDrawer(parseInt(e.target.value))}
-            className="flex-1 bg-[#1a1a1a] border border-white/10 text-white text-sm font-bold p-3 rounded-lg outline-none focus:border-red-500 transition-colors appearance-none cursor-pointer"
+            onChange={e => setSelectedSeasonDrawer(parseInt(e.target.value))}
+            className="flex-1 text-xs font-bold p-3 rounded-lg outline-none transition-colors appearance-none cursor-pointer avatar-title"
+            style={{ background: 'var(--water-mid)', border: '1px solid var(--border-soft)', color: 'var(--parchment)' }}
           >
-            {[1, 2, 3, 4, 5, 6].map(s => (
-              <option key={s} value={s}>Sezon {s}</option>
+            {[1, 2, 3].map(s => (
+              <option key={s} value={s}>Kitap {s}: {ELEMENT_LABELS[s]}</option>
             ))}
           </select>
 
-          {/* Toggle with sliding knob */}
+          {/* Auto-play toggle */}
           <button
             onClick={() => setAutoPlayNext(!autoPlayNext)}
-            className={`shrink-0 flex flex-col justify-center items-center px-3 py-1.5 rounded-lg border transition-all duration-300 ${autoPlayNext ? 'bg-red-900/10 border-red-500/30' : 'bg-[#1a1a1a] border-white/10 hover:border-white/20'}`}
+            className="shrink-0 flex flex-col justify-center items-center px-3 py-1.5 rounded-lg transition-all"
+            style={{
+              background: autoPlayNext ? 'rgba(74,158,202,0.08)' : 'var(--water-mid)',
+              border: `1px solid ${autoPlayNext ? 'rgba(74,158,202,0.3)' : 'var(--border-soft)'}`,
+            }}
           >
-            <span className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors duration-300 ${autoPlayNext ? 'text-red-500' : 'text-gray-500'}`}>
+            <span className="avatar-title text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: autoPlayNext ? 'var(--water-light)' : 'var(--stone)' }}>
               Oto Geçiş
             </span>
-            <div className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${autoPlayNext ? 'bg-red-600' : 'bg-gray-700'}`}>
+            <div className="relative w-10 h-5 rounded-full transition-colors duration-300" style={{ background: autoPlayNext ? 'var(--water-light)' : 'rgba(74,158,202,0.15)' }}>
               <div
-                className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-md"
+                className="absolute top-0.5 w-4 h-4 rounded-full shadow-md"
                 style={{
                   left: autoPlayNext ? 'calc(100% - 18px)' : '2px',
+                  background: 'var(--parchment)',
                   transition: 'left 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 }}
               />
@@ -80,39 +104,82 @@ export default function WatchPage() {
         </div>
       </div>
 
-      <div className={`flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar ${!isDrawer && 'max-h-[600px]'}`}>
-        {getSeasonByNumber(selectedSeasonDrawer)?.episodes.map((ep) => {
+      {/* Episode list */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar" style={{ maxHeight: isDrawer ? undefined : '600px' }}>
+        {getSeasonByNumber(selectedSeasonDrawer)?.episodes.map(ep => {
           const isCurrent = ep.id === episode.id;
           const epProg = getProgress(ep.id);
           const isCompleted = epProg?.completed;
+          const epColor = ELEMENT_COLORS[selectedSeasonDrawer];
+
           return (
             <button
               key={ep.id}
               onClick={() => navigate(`/watch/${ep.season}/${ep.episode}`)}
-              className={`w-full group flex gap-3 p-2.5 rounded-xl transition-all text-left border ${isCurrent ? 'bg-red-900/10 border-red-500/30 ring-1 ring-red-500/50' : 'hover:bg-[#1a1a1a] border-transparent'}`}
+              className="w-full group flex gap-3 p-2.5 rounded-xl transition-all text-left"
+              style={{
+                background: isCurrent ? `${epColor}12` : 'transparent',
+                border: `1px solid ${isCurrent ? `${epColor}44` : 'transparent'}`,
+                boxShadow: isCurrent ? `0 0 12px ${epColor}18` : 'none',
+              }}
+              onMouseEnter={e => { if (!isCurrent) (e.currentTarget.style.background = 'rgba(74,158,202,0.05)' ) }}
+              onMouseLeave={e => { if (!isCurrent) (e.currentTarget.style.background = 'transparent' ) }}
             >
-              <div className="relative w-24 h-14 shrink-0 bg-black rounded-md overflow-hidden ring-1 ring-white/10">
-                <img
-                  src={`/images/thumbnails/Season ${ep.season}/S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}.jpg`}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  onError={(e) => (e.currentTarget.style.display = 'none')}
-                  alt={ep.title}
-                />
-                <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                  <PlayCircle size={20} className={isCurrent ? "text-red-500" : "text-white"} />
+              {/* Thumbnail */}
+              <div
+                className="relative w-24 h-14 shrink-0 rounded-lg overflow-hidden border border-solid"
+                style={{ background: 'var(--water-mid)', borderColor: 'var(--border-soft)' }}
+              >
+                {/* ImageWithOverlay: YouTube benzeri kart hissi */}
+                <div className="absolute inset-0">
+                  {/* eslint-disable-next-line @typescript-eslint/no-unsafe-assignment */}
+                  <img
+                    src={`/images/thumbnails/Season ${ep.season}/e${ep.episode}.webp`}
+                    alt={ep.title}
+                    className="w-full h-full object-cover"
+                    onError={e => (e.currentTarget.style.display = 'none')}
+                  />
+                  {/* overlay */}
+                  <div className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 right-0 z-20 px-2 pb-1 pointer-events-none">
+                    <p className="text-white/70 text-[9px] font-bold tracking-widest uppercase mb-0.5" style={{ opacity: 0.95 }}>
+                      Bölüm {ep.episode}
+                    </p>
+                    <p
+                      className="text-white font-bold text-[10px] leading-tight"
+                      style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+                    >
+                      {ep.title}
+                    </p>
+                  </div>
                 </div>
+
+                <div
+                  className={`absolute inset-0 flex items-center justify-center transition-opacity ${isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                  style={{ background: 'rgba(7,13,26,0.5)' }}
+                >
+                  <PlayCircle size={18} style={{ color: isCurrent ? epColor : 'white' }} />
+                </div>
+
                 {epProg && epProg.percentage > 0 && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
-                    <div className="h-full bg-red-600" style={{ width: `${Math.min(epProg.percentage, 100)}%` }} />
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: 'rgba(7,13,26,0.6)' }}>
+                    <div className="h-full" style={{ width: `${Math.min(epProg.percentage, 100)}%`, background: epColor }} />
                   </div>
                 )}
               </div>
+
+
+              {/* Info */}
               <div className="flex flex-col justify-center flex-1 min-w-0">
                 <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isCurrent ? 'text-red-500' : 'text-gray-500'}`}>Bölüm {ep.episode}</span>
-                  {isCompleted && <CheckCircle size={12} className="text-green-500" />}
+                  <span className="avatar-title text-[10px] font-bold uppercase tracking-wider" style={{ color: isCurrent ? epColor : 'var(--stone)' }}>
+                    Bölüm {ep.episode}
+                  </span>
+                  {isCompleted && <CheckCircle size={12} style={{ color: 'var(--water-light)' }} />}
                 </div>
-                <h4 className={`text-sm font-semibold truncate ${isCurrent ? 'text-white' : 'text-gray-300 group-hover:text-white'}`}>{ep.title}</h4>
+                <h4 className="text-xs font-semibold truncate transition-colors" style={{ color: isCurrent ? 'var(--parchment)' : 'var(--stone)' }}>
+                  {ep.title}
+                </h4>
               </div>
             </button>
           );
@@ -122,111 +189,135 @@ export default function WatchPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white selection:bg-red-600 font-sans overflow-x-hidden">
+    <div className="min-h-screen text-white selection:bg-sky-600 font-sans overflow-x-hidden" style={{ background: 'var(--night)' }}>
 
-      {/* ── Üst Navigasyon Barı ── */}
+      {/* ── Top Nav ── */}
       <div
         className="fixed top-0 left-0 right-0 z-50 p-4 lg:px-8 flex items-center justify-between"
         style={{
           background: mode === 'sinematik'
-            ? 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)'
-            : 'rgba(5,5,5,0.9)',
-          backdropFilter: mode === 'sinematik' ? 'none' : 'blur(12px)',
-          borderBottom: mode === 'sinematik' ? 'none' : '1px solid rgba(255,255,255,0.05)',
+            ? 'linear-gradient(to bottom, rgba(7,13,26,0.85), transparent)'
+            : 'rgba(7,13,26,0.96)',
+          backdropFilter: mode === 'sinematik' ? 'none' : 'blur(16px)',
+          borderBottom: mode === 'sinematik' ? 'none' : '1px solid var(--border-soft)',
           transition: 'all 0.85s ease',
         }}
       >
-        <div className="pointer-events-auto flex items-center gap-4">
-          <button onClick={() => navigate('/')} className="bg-black/60 p-2.5 rounded-full border border-white/10 hover:bg-white/20 transition-all shadow-lg">
+        {/* Left */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2.5 rounded-full transition-all"
+            style={{ background: 'rgba(7,13,26,0.7)', border: '1px solid var(--border-soft)', color: 'var(--stone)' }}
+            onMouseEnter={e => { (e.currentTarget.style.color = 'var(--parchment)'); (e.currentTarget.style.borderColor = 'var(--border-glow)'); }}
+            onMouseLeave={e => { (e.currentTarget.style.color = 'var(--stone)'); (e.currentTarget.style.borderColor = 'var(--border-soft)'); }}
+          >
             <Home size={18} />
           </button>
-          <button onClick={() => navigate(`/season/${season}`)} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors">
-            <div className="bg-black/40 p-2 rounded-full border border-white/10"><ArrowLeft size={16} /></div>
-            <span className="font-semibold text-sm">Sezon {season}</span>
+          <button
+            onClick={() => navigate(`/season/${season}`)}
+            className="flex items-center gap-2 transition-colors"
+            style={{ color: 'var(--stone)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--parchment)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--stone)')}
+          >
+            <div className="p-2 rounded-full" style={{ background: 'rgba(7,13,26,0.7)', border: '1px solid var(--border-soft)' }}>
+              <ArrowLeft size={16} />
+            </div>
+            <span className="avatar-title text-xs font-bold tracking-wider hidden sm:block">Kitap {season}</span>
           </button>
         </div>
 
-        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center hidden md:block" style={{
-          opacity: mode === 'sinematik' ? 1 : 0,
-          transform: `translate(-50%, ${mode === 'sinematik' ? '0' : '-10px'}) scale(${mode === 'sinematik' ? 1 : 0.95})`,
-          transition: springTransition
-        }}>
-          <h1 className="font-serif text-xl font-bold tracking-tight text-white drop-shadow-lg">S{String(season).padStart(2, '0')} E{String(epNum).padStart(2, '0')}</h1>
-          <p className="text-xs font-medium text-gray-300">{episode.title}</p>
+        {/* Center — only in sinematik */}
+        <div
+          className="pointer-events-none absolute left-1/2 -translate-x-1/2 text-center hidden md:block"
+          style={{
+            opacity: mode === 'sinematik' ? 1 : 0,
+            transform: `translate(-50%, ${mode === 'sinematik' ? '0' : '-8px'})`,
+            transition: springTransition,
+          }}
+        >
+          <p className="avatar-title text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: elementColor }}>
+            Kitap {season}: {ELEMENT_LABELS[season]}
+          </p>
+          <h1 className="avatar-title text-base font-bold" style={{ color: 'var(--parchment)' }}>
+            {episode.title}
+          </h1>
         </div>
 
-        <div className="pointer-events-auto flex items-center gap-3">
+        {/* Right */}
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setMode(mode === 'sinematik' ? 'normal' : 'sinematik')}
-            className="bg-black/60 p-2.5 rounded-full border border-white/10 hover:border-red-500/50 hover:bg-white/10 transition-all group"
+            className="p-2.5 rounded-full transition-all group"
+            style={{ background: 'rgba(7,13,26,0.7)', border: '1px solid var(--border-soft)', color: 'var(--stone)' }}
+            onMouseEnter={e => { (e.currentTarget.style.borderColor = elementColor); (e.currentTarget.style.color = elementColor); }}
+            onMouseLeave={e => { (e.currentTarget.style.borderColor = 'var(--border-soft)'); (e.currentTarget.style.color = 'var(--stone)'); }}
             title={mode === 'sinematik' ? 'Normal Mod' : 'Sinematik Mod'}
           >
-            {mode === 'sinematik'
-              ? <Monitor size={18} className="group-hover:text-red-500 transition-colors" />
-              : <MonitorOff size={18} className="group-hover:text-red-500 transition-colors" />
-            }
+            {mode === 'sinematik' ? <Monitor size={18} /> : <MonitorOff size={18} />}
           </button>
 
           {user && (
-            <Link to={`/profile/${user.displayName}`} className="bg-black/60 p-2 rounded-full border border-white/10 hover:border-red-500/50 transition-all">
+            <Link to={`/profile/${user.displayName}`} className="rounded-full overflow-hidden transition-all" style={{ border: `2px solid var(--border-soft)` }}>
               {user.photoURL
-                ? <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
-                : <div className="w-8 h-8 flex items-center justify-center"><User size={18} className="text-gray-400" /></div>}
+                ? <img src={user.photoURL} alt="" className="w-8 h-8 object-cover" />
+                : <div className="w-8 h-8 flex items-center justify-center" style={{ background: 'var(--water-mid)' }}><User size={16} style={{ color: 'var(--stone)' }} /></div>}
             </Link>
           )}
 
-          <div className="overflow-hidden whitespace-nowrap" style={{
-            width: mode === 'sinematik' ? '120px' : '0px',
-            opacity: mode === 'sinematik' ? 1 : 0,
-            marginLeft: mode === 'sinematik' ? '8px' : '0px',
-            transition: springTransition
-          }}>
+          {/* Sinematik mod: Playlist button */}
+          <div
+            className="overflow-hidden whitespace-nowrap"
+            style={{ width: mode === 'sinematik' ? '130px' : '0px', opacity: mode === 'sinematik' ? 1 : 0, marginLeft: mode === 'sinematik' ? '4px' : '0px', transition: springTransition }}
+          >
             <button
               onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
-              className="bg-black/60 px-4 py-2 rounded-full border border-white/10 hover:border-red-500/50 hover:bg-white/10 transition-all flex items-center gap-2 group w-full"
+              className="flex items-center gap-2 px-4 py-2 rounded-full transition-all avatar-title text-xs font-bold uppercase tracking-wider w-full"
+              style={{ background: 'rgba(7,13,26,0.7)', border: '1px solid var(--border-soft)', color: 'var(--stone)' }}
+              onMouseEnter={e => { (e.currentTarget.style.borderColor = elementColor); (e.currentTarget.style.color = elementColor); }}
+              onMouseLeave={e => { (e.currentTarget.style.borderColor = 'var(--border-soft)'); (e.currentTarget.style.color = 'var(--stone)'); }}
             >
-              <ListVideo size={18} className="group-hover:text-red-500" />
-              <span className="font-bold text-xs uppercase tracking-widest hidden sm:inline">Bölümler</span>
+              <ListVideo size={16} />
+              Bölümler
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── BİRLEŞTİRİLMİŞ DİNAMİK ANA İÇERİK ALANI ── */}
-      <div 
+      {/* ── Main Content ── */}
+      <div
         className="mx-auto flex flex-col lg:flex-row relative"
         style={{
           maxWidth: mode === 'sinematik' ? '100%' : '1700px',
-          gap: mode === 'sinematik' ? '0px' : '32px',
-          padding: mode === 'sinematik' ? '0px' : '24px',
-          paddingTop: mode === 'sinematik' ? '0px' : '100px',
-          transition: springTransition
+          gap: mode === 'sinematik' ? '0' : '32px',
+          padding: mode === 'sinematik' ? '0' : '24px',
+          paddingTop: mode === 'sinematik' ? '0' : '100px',
+          transition: springTransition,
         }}
       >
-        
-        {/* SOL TARAF: VİDEO VE BİLGİLER */}
-        <div className="flex-1 flex flex-col w-full min-w-0" style={{ transition: springTransition }}>
-          
-          {/* VİDEO KUTUSU */}
-          <div 
+
+        {/* ── Left: Video + Info ── */}
+        <div className="flex-1 flex flex-col w-full min-w-0">
+
+          {/* Video box */}
+          <div
             className="w-full flex items-center justify-center"
             style={{
               minHeight: mode === 'sinematik' ? '100vh' : 'auto',
               background: mode === 'sinematik' ? '#000' : 'transparent',
-              transition: springTransition
+              transition: springTransition,
             }}
           >
             <div
               className="overflow-hidden relative origin-center"
               style={{
-                width: mode === 'sinematik' ? (isPlaylistOpen ? '75%' : '92%') : '100%',
-                borderRadius: mode === 'sinematik' ? (isPlaylistOpen ? '2.5rem' : '1.5rem') : '1rem',
-                transform: mode === 'sinematik' && isPlaylistOpen ? 'translateX(-12vw)' : 'translateX(0)',
-                boxShadow: mode === 'sinematik' ? '0 20px 50px rgba(0,0,0,0.5)' : 'none',
-                border: mode === 'sinematik' ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(255,255,255,0.05)',
+                width: mode === 'sinematik' ? (isPlaylistOpen ? '72%' : '90%') : '100%',
+                borderRadius: mode === 'sinematik' ? (isPlaylistOpen ? '2.5rem' : '1.5rem') : '0.75rem',
+                transform: mode === 'sinematik' && isPlaylistOpen ? 'translateX(-14vw)' : 'translateX(0)',
+                boxShadow: mode === 'sinematik' ? `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--border-soft)` : 'none',
                 aspectRatio: '16 / 9',
                 transition: springTransition,
-                willChange: 'width, border-radius, transform'
               }}
             >
               <div className="absolute inset-0 w-full h-full bg-black">
@@ -235,94 +326,123 @@ export default function WatchPage() {
             </div>
           </div>
 
-          {/* ORTAK ALT BİLGİ BÖLÜMÜ */}
+          {/* Info section */}
           <div
             className="w-full mx-auto"
             style={{
-              maxWidth: mode === 'sinematik' ? '1152px' : '100%', // 1152px = max-w-6xl
-              padding: mode === 'sinematik' ? '64px 16px' : '24px 0px 0px 0px',
-              transition: springTransition
+              maxWidth: mode === 'sinematik' ? '1100px' : '100%',
+              padding: mode === 'sinematik' ? '60px 16px' : '24px 0 0 0',
+              transition: springTransition,
             }}
           >
-            <div className={`flex flex-col sm:flex-row justify-between gap-4 mb-2 ${mode === 'sinematik' ? 'sm:items-center mb-4' : 'sm:items-start'}`}>
-              <h2 className="font-serif font-bold tracking-tight text-white" style={{
-                fontSize: mode === 'sinematik' ? '2.25rem' : '1.875rem',
-                lineHeight: mode === 'sinematik' ? '2.5rem' : '2.25rem',
-                transition: springTransition
-              }}>
-                {episode.title}
-              </h2>
+            {/* Title + nav */}
+            <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+              <div>
+                {/* Element + episode label */}
+                <div className="flex items-center gap-3 mb-2">
+                  <span
+                    className="avatar-title text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full"
+                    style={{ background: `${elementColor}18`, color: elementColor, border: `1px solid ${elementColor}33` }}
+                  >
+                    Kitap {season} · {ELEMENT_LABELS[season]}
+                  </span>
+                  <span
+                    className="avatar-title text-[9px] font-bold uppercase tracking-widest"
+                    style={{
+                      opacity: mode === 'sinematik' ? 0 : 1,
+                      height: mode === 'sinematik' ? 0 : 'auto',
+                      color: 'var(--stone)',
+                      transition: springTransition,
+                    }}
+                  >
+                    Bölüm {epNum}
+                  </span>
+                </div>
+
+                <h2
+                  className="avatar-title font-bold tracking-wide"
+                  style={{
+                    fontSize: mode === 'sinematik' ? '2rem' : '1.5rem',
+                    color: 'var(--parchment)',
+                    lineHeight: 1.2,
+                    transition: springTransition,
+                  }}
+                >
+                  {episode.title}
+                </h2>
+              </div>
+
+              {/* Prev / Next */}
               <div className="flex items-center gap-2 shrink-0">
                 {prevEpisode && (
-                  <button onClick={() => navigate(`/watch/${prevEpisode.season}/${prevEpisode.episode}`)} className={`flex items-center gap-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/10 font-semibold ${mode === 'sinematik' ? 'px-5 py-2.5' : 'px-4 py-2 text-sm'}`}>
-                    <ArrowLeft size={mode === 'sinematik' ? 18 : 16} /> Önceki Bölüm
+                  <button
+                    onClick={() => navigate(`/watch/${prevEpisode.season}/${prevEpisode.episode}`)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all avatar-title text-xs font-bold uppercase tracking-wider"
+                    style={{ background: 'var(--water-mid)', border: '1px solid var(--border-soft)', color: 'var(--stone)' }}
+                    onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-glow)')}
+                    onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-soft)')}
+                  >
+                    <ArrowLeft size={14} /> Önceki
                   </button>
                 )}
                 {nextEpisode && (
-                  <button onClick={() => navigate(`/watch/${nextEpisode.season}/${nextEpisode.episode}`)} className={`flex items-center gap-2 bg-red-600/80 hover:bg-red-600 rounded-lg transition-colors border border-red-500/50 text-white font-semibold shadow-lg shadow-red-900/20 ${mode === 'sinematik' ? 'px-5 py-2.5' : 'px-4 py-2 text-sm'}`}>
-                    Sonraki Bölüm <ArrowRight size={mode === 'sinematik' ? 18 : 16} />
+                  <button
+                    onClick={() => navigate(`/watch/${nextEpisode.season}/${nextEpisode.episode}`)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg transition-all avatar-title text-xs font-bold uppercase tracking-wider"
+                    style={{ background: elementColor, color: 'var(--night)', border: `1px solid ${elementColor}` }}
+                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                  >
+                    Sonraki <ArrowRight size={14} />
                   </button>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 overflow-hidden" style={{
-              height: mode === 'sinematik' ? '0px' : '32px',
-              opacity: mode === 'sinematik' ? 0 : 1,
-              marginBottom: mode === 'sinematik' ? '0px' : '24px',
-              transition: springTransition
-            }}>
-              <span className="bg-white/10 text-white px-3 py-1 rounded-md text-xs font-bold uppercase border border-white/5 whitespace-nowrap">
-                S{String(season).padStart(2, '0')} E{String(epNum).padStart(2, '0')}
-              </span>
-              <span className="text-gray-400 text-sm font-medium whitespace-nowrap">{episode.airDate}</span>
-            </div>
-
-            <div style={{
-              maxWidth: mode === 'sinematik' ? '768px' : '896px', // 3xl vs 4xl
-              background: mode === 'sinematik' ? 'transparent' : '#0a0a0a',
-              padding: mode === 'sinematik' ? '0px' : '24px',
-              borderRadius: mode === 'sinematik' ? '0px' : '1rem',
-              border: mode === 'sinematik' ? 'none' : '1px solid rgba(255,255,255,0.05)',
-              marginBottom: '48px',
-              transition: springTransition
-            }}>
-              <p className="text-gray-300 leading-relaxed" style={{
-                fontSize: mode === 'sinematik' ? '1.125rem' : '1rem',
-                transition: springTransition
-              }}>
+            {/* Description */}
+            <div
+              className="rounded-xl p-5 mb-12"
+              style={{
+                background: mode === 'sinematik' ? 'transparent' : 'var(--water-mid)',
+                border: mode === 'sinematik' ? 'none' : '1px solid var(--border-soft)',
+                transition: springTransition,
+                maxWidth: mode === 'sinematik' ? '700px' : '100%',
+              }}
+            >
+              <p className="text-sm leading-relaxed" style={{ color: 'var(--stone)' }}>
                 {episode.description}
               </p>
             </div>
 
+            {/* Comments */}
             <EpisodeComments episodeId={episode.id} />
           </div>
         </div>
 
-        {/* SAĞ TARAF: OYNATMA LİSTESİ (NORMAL MOD) */}
-        <div className="overflow-hidden shrink-0" style={{
-          width: mode === 'normal' ? '400px' : '0px',
-          opacity: mode === 'normal' ? 1 : 0,
-          transition: springTransition
-        }}>
-          <div className="w-[400px]">
+        {/* ── Right: Playlist (normal mode) ── */}
+        <div
+          className="overflow-hidden shrink-0"
+          style={{ width: mode === 'normal' ? '380px' : '0px', opacity: mode === 'normal' ? 1 : 0, transition: springTransition }}
+        >
+          <div className="w-[380px]">
             <PlaylistContent />
           </div>
         </div>
-
       </div>
 
-      {/* ── Sinematik Mod: Sağ Çekmece ── */}
-      <div 
-        className="fixed inset-y-0 right-0 z-[100] w-full sm:w-96 bg-[#0a0a0a]/95 backdrop-blur-3xl border-l border-white/10 shadow-2xl"
+      {/* ── Sinematik: Drawer ── */}
+      <div
+        className="fixed inset-y-0 right-0 z-[100] w-full sm:w-96 shadow-2xl"
         style={{
+          background: 'rgba(7,13,26,0.97)',
+          backdropFilter: 'blur(24px)',
+          borderLeft: '1px solid var(--border-soft)',
           transform: mode === 'sinematik' && isPlaylistOpen ? 'translateX(0)' : 'translateX(100%)',
-          transition: springTransition
+          transition: springTransition,
         }}
       >
-        <PlaylistContent isDrawer={true} />
+        <PlaylistContent isDrawer />
       </div>
-
     </div>
   );
 }

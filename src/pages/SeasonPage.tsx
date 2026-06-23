@@ -2,7 +2,13 @@ import { useParams, Link } from 'react-router-dom';
 import { getSeasonByNumber } from '../data/episodes';
 import { useFirebaseProgress } from '../hooks/useFirebaseProgress';
 import EpisodeCard from '../components/EpisodeCard';
-import { ArrowLeft, PlaySquare } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+
+const ELEMENT_COLORS: Record<number, string> = {
+  1: 'var(--element-water)',
+  2: 'var(--element-earth)',
+  3: 'var(--element-fire)',
+};
 
 export default function SeasonPage() {
   const { seasonNumber } = useParams<{ seasonNumber: string }>();
@@ -13,97 +19,120 @@ export default function SeasonPage() {
 
   if (!season) {
     return (
-      <div className="w-full bg-black min-h-screen flex items-center justify-center text-center px-4">
-         <div>
-          <h1 className="font-serif text-4xl sm:text-6xl font-bold text-red-600 mb-4 tracking-tight">
-            Sezon Bulunamadı
+      <div className="w-full min-h-screen flex items-center justify-center text-center px-4" style={{ background: 'var(--night)' }}>
+        <div>
+          <h1 className="avatar-title text-4xl font-bold mb-4" style={{ color: 'var(--water-light)' }}>
+            Kitap Bulunamadı
           </h1>
-          <Link to="/" className="text-white hover:text-red-500 transition-colors font-medium">
-            ← Ana Sayfaya Dön
-          </Link>
+          <Link to="/" className="avatar-title text-sm tracking-wider" style={{ color: 'var(--stone)' }}>← Ana Sayfaya Dön</Link>
         </div>
       </div>
     );
   }
 
   const progress = getSeasonProgress(season.number);
+  const elementColor = ELEMENT_COLORS[season.number];
 
   return (
-    <div className="w-full min-h-screen bg-black text-white font-sans">
-      
-      {/* Header Area */}
+    <div className="w-full min-h-screen" style={{ background: 'var(--night)', color: 'var(--parchment)' }}>
+
+      {/* Header */}
       <div className="relative pt-32 pb-16 overflow-hidden">
-        
-        {/* Cinematic Backdrop */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none z-10" />
-        <div className="absolute top-0 right-0 w-3/4 h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(220,38,38,0.15)_0%,_transparent_60%)] pointer-events-none z-0" />
-        
-        <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-16">
-          <Link to="/" className="inline-flex items-center gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.1em] text-gray-400 hover:text-white transition-colors mb-8">
-            <ArrowLeft size={16} /> Tüm Sezonlar
+
+        {/* Background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at top right, ${elementColor}18 0%, transparent 60%)` }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, var(--night) 0%, transparent 100%)' }} />
+        </div>
+
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-16">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 avatar-title text-[10px] font-bold uppercase tracking-[0.15em] mb-8 transition-colors"
+            style={{ color: 'var(--stone)' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--parchment)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--stone)')}
+          >
+            <ArrowLeft size={14} /> Tüm Kitaplar
           </Link>
-          
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-16">
+
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
             <div className="animate-fade-in-up flex-1">
-              
+              {/* Element badge */}
               <div className="flex items-center gap-3 mb-4">
-                <span className="bg-[#222] text-white px-2 py-0.5 rounded text-xs font-bold tracking-widest uppercase">
+                <div
+                  className="avatar-title text-[10px] font-bold tracking-widest uppercase px-3 py-1 rounded-full"
+                  style={{ background: `${elementColor}18`, color: elementColor, border: `1px solid ${elementColor}33` }}
+                >
+                  ● {season.element}
+                </div>
+                <span className="avatar-title text-[10px] font-semibold tracking-widest uppercase" style={{ color: 'var(--stone)' }}>
                   {season.year}
-                </span>
-                <span className="text-sm font-bold text-red-500 flex items-center gap-1.5 uppercase tracking-widest">
-                  <PlaySquare size={14} /> {season.episodeCount} Bölüm
                 </span>
               </div>
 
-              <h1 className="font-serif text-5xl sm:text-7xl font-bold text-white tracking-tight mb-6 drop-shadow-lg leading-none">
-                Sezon {season.number}
+              <h1 className="avatar-title font-bold tracking-wide mb-4" style={{ fontSize: 'clamp(2rem, 6vw, 4rem)', color: 'var(--parchment)', lineHeight: 1.1 }}>
+                {season.title}
               </h1>
 
-              <p className="text-gray-300 text-sm sm:text-base leading-relaxed max-w-3xl">
+              <p className="text-sm sm:text-base leading-relaxed max-w-2xl" style={{ color: 'var(--stone)' }}>
                 {season.description}
               </p>
             </div>
 
-            {/* Micro Progress Bar */}
+            {/* Progress */}
             {!loading && (
-              <div className="animate-fade-in-up shrink-0 w-full md:w-64 bg-[#111] p-5 rounded-md border border-[#222]">
+              <div
+                className="animate-fade-in-up shrink-0 w-full md:w-64 p-5 rounded-xl"
+                style={{ background: 'var(--water-mid)', border: '1px solid var(--border-soft)' }}
+              >
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-                    Sezon İlerlemesi
+                  <span className="avatar-title text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--stone)' }}>
+                    İlerleme
                   </span>
-                  <span className="text-sm font-bold text-white">
-                    {progress.watched} <span className="text-gray-600 font-normal">/ {progress.total}</span>
+                  <span className="avatar-title text-sm font-bold" style={{ color: 'var(--parchment)' }}>
+                    {progress.watched} <span style={{ color: 'var(--stone)', fontWeight: 400 }}>/ {progress.total}</span>
                   </span>
                 </div>
-                <div className="h-1.5 w-full bg-[#222] rounded-full overflow-hidden">
+                <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ background: 'rgba(74,158,202,0.1)' }}>
                   <div
-                    className="h-full bg-red-600 transition-all duration-500"
-                    style={{ width: `${progress.percentage}%` }}
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${progress.percentage}%`, background: elementColor }}
                   />
                 </div>
+                <p className="avatar-title text-[10px] tracking-wider mt-2" style={{ color: 'var(--stone)' }}>
+                  {season.episodeCount} bölüm
+                </p>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Grid Area */}
-      <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8">
-        <h2 className="text-xl font-bold text-white tracking-tight mb-6">Bölümler</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
+      {/* Episode Grid */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 lg:px-16 py-8">
+        <div className="flex items-center gap-4 mb-6">
+          <div className="h-px w-4" style={{ background: elementColor }} />
+          <h2 className="avatar-title text-xs font-bold tracking-[0.2em] uppercase" style={{ color: elementColor }}>
+            Bölümler
+          </h2>
+          <div className="h-px flex-1" style={{ background: 'var(--border-soft)' }} />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-5 gap-y-10">
           {season.episodes.map((ep, idx) => (
-            <EpisodeCard 
-              key={ep.id} 
-              episode={ep} 
-              index={idx} 
-              isCurrent={lastWatched?.episodeId === ep.id} 
+            <EpisodeCard
+              key={ep.id}
+              episode={ep}
+              index={idx}
+              isCurrent={lastWatched?.episodeId === ep.id}
+              elementColor={elementColor}
             />
           ))}
         </div>
       </div>
 
-      {/* Footer Buffer */}
-      <div className="h-24 bg-black" />
+      <div className="h-24" />
     </div>
   );
 }

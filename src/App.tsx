@@ -11,8 +11,11 @@ import AboutPage from './pages/AboutPage';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, authLoading } = useStore();
   if (authLoading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--night)' }}>
+      <div
+        className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin"
+        style={{ borderColor: 'var(--water-light)', borderTopColor: 'transparent' }}
+      />
     </div>
   );
   if (!user) return <Navigate to="/auth" />;
@@ -25,7 +28,7 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-black text-white font-sans selection:bg-red-600 selection:text-white">
+      <div className="min-h-screen font-sans" style={{ background: 'var(--night)', color: 'var(--parchment)' }}>
         <Routes>
           <Route path="/auth" element={<AuthPage />} />
 
@@ -44,9 +47,7 @@ function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="/season/:seasonNumber" element={<SeasonPage />} />
-                    {/* Kendi profili */}
                     <Route path="/profile" element={<ProfilePage />} />
-                    {/* Başka kullanıcı profili */}
                     <Route path="/profile/:username" element={<ProfilePage />} />
                   </Routes>
                 </div>

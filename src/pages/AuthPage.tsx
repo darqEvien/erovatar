@@ -11,6 +11,15 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { checkUsernameAvailable, completeUserProfile } from '../lib/userUtils';
 import { AVATARS } from '../data/avatars';
+import ImageWithOverlay from '../components/ImageWithOverlay';
+
+function formatCharacterName(filename: string): string {
+  return filename
+    .replace(/\.[^.]+$/, '') // Remove extension
+    .replace(/_/g, ' ') // Replace underscores with spaces
+    .replace(/%2C/g, ',') // Handle encoded commas
+    .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
+}
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -136,15 +145,22 @@ export default function AuthPage() {
       </label>
       <p className="text-[11px] text-gray-600 ml-1 mb-2">Sonradan profil ayarlarından değiştirebilirsin.</p>
       <div className="flex gap-3 overflow-x-auto pb-4 pt-1 snap-x custom-scrollbar">
-        {AVATARS.map((av) => (
-          <button key={av} type="button" onClick={() => toggleAvatar(av)}
-            className={`relative shrink-0 snap-center rounded-full overflow-hidden w-16 h-16 border-2 transition-all ${selectedAvatar === av
-                ? 'border-red-500 scale-110 shadow-lg shadow-red-900/30'
-                : 'border-transparent hover:border-white/30 filter grayscale hover:grayscale-0'
-              }`}>
-            <img src={`/profilePics/${av}`} alt="Avatar" className="w-full h-full object-cover" />
-          </button>
-        ))}
+        {AVATARS.map((av) => {
+          const characterName = formatCharacterName(av);
+          return (
+            <button key={av} type="button" onClick={() => toggleAvatar(av)}
+              className={`relative shrink-0 snap-center rounded-full overflow-hidden w-16 h-16 border-2 transition-all ${selectedAvatar === av
+                  ? 'border-red-500 scale-110 shadow-lg shadow-red-900/30'
+                  : 'border-transparent hover:border-white/30 filter grayscale hover:grayscale-0'
+                }`}>
+              <ImageWithOverlay 
+                src={`/profilePics/${av}`} 
+                alt={characterName}
+                overlayTexts={[]}
+                className="w-full h-full object-cover" />
+            </button>
+          );
+        })}
       </div>
     </div>
   );

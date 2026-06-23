@@ -4,10 +4,28 @@ import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
 import { Star, Trash2, Send, Edit3, X, Check } from 'lucide-react';
 
+const ELEMENT_COLORS: Record<number, string> = {
+  1: 'var(--element-water)',
+  2: 'var(--element-earth)',
+  3: 'var(--element-fire)',
+};
+
+function parseEpisodeSeason(episodeId: string): number {
+  const match = episodeId.match(/S(\d+)E(\d+)/i);
+  if (!match) return 1;
+  const season = Number(match[1]);
+  return Number.isFinite(season) ? season : 1;
+}
+
 export default function EpisodeComments({ episodeId }: { episodeId: string }) {
   // useComments hook'una updateComment eklendiğini varsayıyoruz
   const { comments, loading, addComment, deleteComment, updateComment } = useComments(episodeId);
   const { user } = useStore();
+
+  const season = parseEpisodeSeason(episodeId);
+  const elementColor = ELEMENT_COLORS[season] || 'var(--element-water)';
+  void elementColor;
+
 
   // Form State
   const [text, setText] = useState('');
@@ -30,8 +48,9 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
       await addComment(text, rating);
       setText('');
       setRating(5);
-    } catch (error: any) {
-      alert(error.message || "Yorum eklenirken hata oluştu.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Yorum eklenirken hata oluştu.';
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -47,12 +66,15 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
     }
   };
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'Az önce';
-    // Firestore Timestamp objesi mi yoksa normal tarih mi kontrolü
-    const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  const formatDate = (timestamp: unknown): string => {
+    type FirestoreTimestampLike = { toDate: () => Date };
 
-    // Geçersiz tarih kontrolü
+    if (!timestamp) return 'Az önce';
+
+    const date = (timestamp as FirestoreTimestampLike)?.toDate
+      ? (timestamp as FirestoreTimestampLike).toDate()
+      : new Date(timestamp as string | number | Date);
+
     if (isNaN(date.getTime())) return 'Az önce';
 
     return new Intl.DateTimeFormat('tr-TR', {
@@ -67,15 +89,15 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
   return (
     <div className="w-full max-w-5xl mx-auto py-12 px-6">
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-serif font-bold text-white tracking-tight">Bölüm Yorumları</h2>
-        <div className="text-red-500 font-bold bg-red-500/10 px-4 py-1.5 rounded-full text-sm">
+        <h2 className="text-3xl font-serif font-bold tracking-tight" style={{ color: 'var(--parchment)' }}>Bölüm Yorumları</h2>
+        <div className="font-bold px-4 py-1.5 rounded-full text-sm" style={{ background: 'rgba(74,158,202,0.10)', border: '1px solid rgba(74,158,202,0.25)', color: 'var(--water-light)' }}>
           {comments.length} Yorum
         </div>
       </div>
 
       {/* Yorum Ekleme Formu */}
       <div className="bg-[#111] border border-white/10 rounded-2xl p-6 mb-10 shadow-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-red-500 to-transparent opacity-50" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[rgba(74,158,202,0.9)] to-transparent opacity-50" />
 
         {user ? (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

@@ -8,6 +8,7 @@ import { AVATARS } from '../data/avatars';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Check, User, MessageSquare, Tv, ChevronRight, Settings, Star, Trash2 } from 'lucide-react';
 import { getEpisode } from '../data/episodes';
+import ImageWithOverlay from '../components/ImageWithOverlay';
 
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 interface Comment {
@@ -31,6 +32,14 @@ function parseEpisodeId(episodeId: string): { season: number; episode: number } 
   const match = episodeId.match(/S(\d+)E(\d+)/i);
   if (!match) return null;
   return { season: parseInt(match[1]), episode: parseInt(match[2]) };
+}
+
+function formatCharacterName(filename: string): string {
+  return filename
+    .replace(/\.[^.]+$/, '') // Remove extension
+    .replace(/_/g, ' ') // Replace underscores with spaces
+    .replace(/%2C/g, ',') // Handle encoded commas
+    .replace(/\b\w/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -475,11 +484,15 @@ export default function ProfilePage() {
                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2 sm:gap-3 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
                   {AVATARS.map((av) => {
                     const isSelected = selectedAvatar === av;
+                    const characterName = formatCharacterName(av);
                     return (
                       <button key={av} type="button"
                         onClick={() => setSelectedAvatar(prev => prev === av ? null : av)}
                         className="group relative aspect-square rounded-2xl overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500">
-                        <img src={`/profilePics/${av}`} alt={av.replace(/\.[^.]+$/, '').replace(/_/g, ' ')}
+                        <ImageWithOverlay 
+                          src={`/profilePics/${av}`} 
+                          alt={characterName}
+                          overlayTexts={[characterName]}
                           className={`w-full h-full object-cover transition-all duration-300 ${isSelected ? 'scale-105 brightness-100' : 'brightness-50 grayscale group-hover:brightness-90 group-hover:grayscale-0 group-hover:scale-105'}`} />
                         <div className={`absolute inset-0 rounded-2xl border-2 transition-all duration-200 ${isSelected ? 'border-red-500' : 'border-transparent group-hover:border-white/30'}`} />
                         {isSelected && (
@@ -487,11 +500,6 @@ export default function ProfilePage() {
                             <Check size={11} className="text-white" strokeWidth={3} />
                           </div>
                         )}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-1.5 translate-y-full group-hover:translate-y-0 transition-transform duration-200 rounded-b-2xl">
-                          <p className="text-[9px] text-white/80 text-center leading-tight truncate font-medium">
-                            {av.replace(/\.[^.]+$/, '').replace(/_/g, ' ').replace(/%2C/g, ',')}
-                          </p>
-                        </div>
                       </button>
                     );
                   })}

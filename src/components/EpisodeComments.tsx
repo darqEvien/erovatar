@@ -22,6 +22,7 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
   const { comments, loading, addComment, deleteComment, updateComment } = useComments(episodeId);
   const { user } = useStore();
 
+
   const season = parseEpisodeSeason(episodeId);
   const elementColor = ELEMENT_COLORS[season] || 'var(--element-water)';
   void elementColor;
@@ -61,7 +62,7 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
     try {
       await updateComment(commentId, editText, editRating);
       setEditingId(null);
-    } catch (error) {
+    } catch {
       alert("Güncelleme yapılamadı.");
     }
   };
@@ -105,7 +106,7 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
               {user.photoURL && user.photoURL !== 'default' ? (
                 <img src={user.photoURL} alt="Profil" className="w-10 h-10 rounded-full border border-white/20" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-red-600/20 text-red-500 flex items-center justify-center font-bold border border-red-500/30">
+                      <div className="w-10 h-10 rounded-full bg-[#111] text-white flex items-center justify-center font-bold border border-white/20">
                   {user.email?.[0].toUpperCase()}
                 </div>
               )}
@@ -124,7 +125,8 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                     >
                       <Star
                         size={20}
-                        className={`transition-colors ${(hoverRating || rating) >= star ? 'fill-red-500 text-red-500' : 'text-gray-600'}`}
+                        style={{ color: elementColor, fill: (hoverRating || rating) >= star ? elementColor : 'transparent' }}
+                        className={`transition-colors ${ (hoverRating || rating) >= star ? '' : 'text-gray-600' }`}
                       />
                     </button>
                   ))}
@@ -137,13 +139,14 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Bu bölüm hakkında ne düşünüyorsunuz?"
-                className="w-full bg-black/50 border border-white/10 text-white rounded-xl p-4 min-h-[100px] pb-14 focus:outline-none focus:border-red-500 transition-colors resize-none"
+                className="w-full bg-black/50 border border-white/10 text-white rounded-xl p-4 min-h-[100px] pb-14 focus:outline-none focus:border-white/30 transition-colors resize-none"
                 required
               />
               <button
                 type="submit"
                 disabled={isSubmitting || !text.trim() || rating === 0} // Puan seçilmediyse basılamaz
-                className="absolute bottom-3 right-3 bg-red-600 hover:bg-red-700 disabled:opacity-40 disabled:hover:bg-red-600 disabled:grayscale text-white p-2 px-4 rounded-lg font-bold text-sm tracking-wide flex items-center gap-2 transition-all shadow-lg shadow-red-900/20"
+                style={{ background: elementColor }}
+                className="absolute bottom-3 right-3 hover:brightness-110 disabled:opacity-40 disabled:grayscale text-white p-2 px-4 rounded-lg font-bold text-sm tracking-wide flex items-center gap-2 transition-all shadow-lg"
               >
                 {rating === 0 ? 'Puan Seçin' : isSubmitting ? 'Gönderiliyor...' : 'Gönder'}
                 <Send size={16} />
@@ -177,9 +180,9 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                 <div className="shrink-0 mt-1">
                   <Link to={`/profile/${comment.userName}`}>
                     {comment.userPhoto && comment.userPhoto !== 'default' ? (
-                      <img src={comment.userPhoto} alt={comment.userName || 'Kullanıcı'} className="w-12 h-12 rounded-full border border-white/10 hover:border-red-500 transition-colors" />
+                      <img src={comment.userPhoto} alt={comment.userName || 'Kullanıcı'} className="w-12 h-12 rounded-full border border-white/10 hover:border-white/20 transition-colors" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center text-gray-400 border border-white/5 hover:border-red-500 transition-colors font-bold uppercase">
+                      <div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center text-gray-400 border border-white/5 hover:border-white/20 transition-colors font-bold uppercase">
                         {comment.userName ? comment.userName[0] : '?'}
                       </div>
                     )}
@@ -208,14 +211,21 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                         >
                           <Star
                             size={20}
-                            className={`transition-colors ${
-                              (editingId === comment.id 
-                                ? (hoverEditRating || editRating) 
-                                : Number(comment.rating) || 0
-                              ) >= star 
-                                ? 'fill-red-500 text-red-500' 
-                                : 'text-white/10 fill-white/5'
-                            }`}
+                            style={{
+                              fill:
+                                (editingId === comment.id
+                                  ? (hoverEditRating || editRating)
+                                  : Number(comment.rating) || 0) >= star
+                                  ? elementColor
+                                  : 'transparent',
+                              color:
+                                (editingId === comment.id
+                                  ? (hoverEditRating || editRating)
+                                  : Number(comment.rating) || 0) >= star
+                                  ? elementColor
+                                  : '#ffffff20'
+                            }}
+                            className="transition-colors"
                           />
                         </button>
                       ))}
@@ -227,7 +237,7 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                       <textarea
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
-                        className="w-full bg-black border border-red-500/50 text-white rounded-lg p-3 text-sm focus:outline-none min-h-[80px] resize-none"
+                        className="w-full bg-black border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none min-h-[80px] resize-none"
                         autoFocus
                       />
                       <div className="flex justify-end gap-2 mt-2">
@@ -239,7 +249,8 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                         </button>
                         <button
                           onClick={() => handleUpdate(comment.id)}
-                          className="p-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                          style={{ background: elementColor }}
+                          className="p-2 text-white rounded-md hover:brightness-110 transition-colors"
                         >
                           <Check size={16} />
                         </button>
@@ -273,7 +284,8 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                         deleteComment(comment.id);
                       }
                     }}
-                    className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                    style={{ color: elementColor }}
+                    className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
                     title="Yorumu Sil"
                   >
                     <Trash2 size={16} />

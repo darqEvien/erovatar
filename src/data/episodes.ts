@@ -148,16 +148,21 @@ export function getPreviousEpisode(seasonNumber: number, episodeNumber: number):
   return prevSeason?.episodes[prevSeason.episodes.length - 1];
 }
 
-const R2_BASE = (import.meta.env.VITE_R2_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+
 
 // HLS path: /videos/s1/e1/index.m3u8
+const R2_BASE = (import.meta.env.VITE_R2_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+
+// HLS path: /s1/e1/index.m3u8
 export function getVideoUrl(episode: Episode): string {
   const s = episode.season;
   const e = episode.episode;
-  if (R2_BASE) {
-    return `${R2_BASE}/s${s}/e${e}/index.m3u8`;
-  }
-  return `/videos/s${s}/e${e}/index.m3u8`;
+  
+  // URL'nin sonuna Date.now() ekleyerek Cloudflare Cache'ini kırmaya devam ediyoruz
+  const cacheBuster = `?cb=${Date.now()}`;
+  
+  // R2_BASE kullanarak ve sezon/bölüm değişkenlerini dinamik vererek URL'i oluşturuyoruz
+  return `${R2_BASE}/s${s}/e${e}/index.m3u8${cacheBuster}`;
 }
 
 export function getSubtitleUrl(episode: Episode, lang: 'tr' | 'en' = 'tr'): string {
@@ -165,10 +170,8 @@ export function getSubtitleUrl(episode: Episode, lang: 'tr' | 'en' = 'tr'): stri
   const ee = String(episode.episode).padStart(2, '0');
   const s = episode.season;
   const e = episode.episode;
-  if (R2_BASE) {
-    return `${R2_BASE}/s${s}/e${e}/S${ss}E${ee}${lang === 'en' ? '.en.srt' : '.srt'}`;
-  }
-  return `/videos/s${s}/e${e}/S${ss}E${ee}${lang === 'en' ? '.en.srt' : '.srt'}`;
+  
+  return `${R2_BASE}/s${s}/e${e}/S${ss}E${ee}${lang === 'en' ? '.en.srt' : '.srt'}`;
 }
 
 export const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodeCount, 0);

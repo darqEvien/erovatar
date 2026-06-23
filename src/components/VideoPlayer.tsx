@@ -92,32 +92,30 @@ export default function VideoPlayer({ episode, mini = false }: VideoPlayerProps)
     const videoUrl = getVideoUrl(episode);
     const savedProgress = getProgress(episode.id);
     const startTime = savedProgress && !savedProgress.completed ? savedProgress.currentTime : 0;
+    const cacheBusterUrl = `${videoUrl}${videoUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
+const playerOptions = {
+  autoplay: true,
+  controls: true,
+  playsinline: true,
+  crossorigin: 'anonymous',
+  responsive: true,
+  fluid: false,
+  fill: true,
+  liveui: false,
+  preload: 'auto',
 
-    const playerOptions = {
-      autoplay: true,
-      controls: true,
-      playsinline: true,
-      crossorigin: 'anonymous',
-      responsive: true,
-      fluid: false,
-      fill: true,
-liveui: false,
-      preload: 'auto',
-
-      playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
-      html5: {
-        vhs: {
-          overrideNative: !videojs.browser.IS_SAFARI,
-          // Enable thumbnail sprites via VTT
-          useBandwidthFromLocalStorage: true,
-        },
-        nativeVideoTracks: videojs.browser.IS_SAFARI,
-        nativeAudioTracks: videojs.browser.IS_SAFARI,
-        nativeTextTracks: videojs.browser.IS_SAFARI,
-      },
-      // HLS .m3u8 source
-sources: [{ src: videoUrl, type: 'application/x-mpegURL' }],
-
+playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
+  html5: {
+    vhs: {
+      overrideNative: !videojs.browser.IS_SAFARI,
+      useBandwidthFromLocalStorage: true,
+    },
+    nativeVideoTracks: videojs.browser.IS_SAFARI,
+    nativeAudioTracks: videojs.browser.IS_SAFARI,
+    nativeTextTracks: videojs.browser.IS_SAFARI,
+  },
+  // DEĞİŞEN KISIM: cacheBusterUrl kullanıyoruz
+  sources: [{ src: cacheBusterUrl, type: 'application/x-mpegURL' }],
 
 
       ...(mini && {

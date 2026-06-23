@@ -171,7 +171,7 @@ export function getSubtitleUrl(episode: Episode, lang: 'tr' | 'en' = 'tr'): stri
   const s = episode.season;
   const e = episode.episode;
   
-  return `${R2_BASE}/s${s}/e${e}/S${ss}E${ee}${lang === 'en' ? '.en.srt' : '.srt'}`;
+  return `${R2_BASE}/s${s}/e${e}/S${ss}E${ee}${lang === 'en' ? '.en.vtt' : '.vtt'}`;
 }
 
 export const totalEpisodes = seasons.reduce((sum, s) => sum + s.episodeCount, 0);

@@ -3,7 +3,7 @@ import { getEpisode, getSeasonByNumber, getNextEpisode, getPreviousEpisode } fro
 import VideoPlayer from '../components/VideoPlayer';
 import { useFirebaseProgress } from '../hooks/useFirebaseProgress';
 import { ArrowLeft, ArrowRight, ListVideo, Home, X, PlayCircle, CheckCircle, Monitor, MonitorOff, User } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
 import EpisodeComments from '../components/EpisodeComments';
@@ -37,6 +37,23 @@ export default function WatchPage() {
   const [mode, setMode] = useState<'sinematik' | 'normal'>('normal');
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
   const [selectedSeasonDrawer, setSelectedSeasonDrawer] = useState(season);
+
+  // ── Smooth oto-geçiş overlay ────────────────────────────────────────────────
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [overlayOpacity, setOverlayOpacity] = useState(0);
+
+  const smoothNavigateToNext = useCallback(() => {
+    if (!nextEpisode || isTransitioning) return;
+    // Phase 1: fade to black (0–350ms)
+    setIsTransitioning(true);
+    setOverlayOpacity(1);
+    setTimeout(() => {
+      // Phase 2: navigate while black (user sees nothing jarring)
+      navigate(`/watch/${nextEpisode.season}/${nextEpisode.episode}`);
+      // Phase 3: fade back (400–750ms, after new episode is mounted)
+      setOverlayOpacity(0);
+    }, 400);
+  }, [nextEpisode, isTransitioning, navigate]);
 
   const elementColor = ELEMENT_COLORS[season];
 
@@ -191,6 +208,16 @@ export default function WatchPage() {
   return (
     <div className="min-h-screen text-white selection:bg-sky-600 font-sans overflow-x-hidden" style={{ background: 'var(--night)' }}>
 
+      {/* ── Oto-geçiş fade overlay ──────────────────────────────────────────── */}
+      <div
+        className="fixed inset-0 z-[200] pointer-events-none"
+        style={{
+          background: 'var(--night)',
+          opacity: overlayOpacity,
+          transition: 'opacity 0.4s ease',
+        }}
+      />
+
       {/* ── Top Nav ── */}
       <div
         className="fixed top-0 left-0 right-0 z-50 p-4 lg:px-8 flex items-center justify-between"
@@ -321,7 +348,7 @@ export default function WatchPage() {
               }}
             >
               <div className="absolute inset-0 w-full h-full bg-black">
-                <VideoPlayer key={episode.id} episode={episode} />
+                <VideoPlayer key={episode.id} episode={episode} onGoNext={smoothNavigateToNext} />
               </div>
             </div>
           </div>

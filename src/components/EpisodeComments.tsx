@@ -2,39 +2,20 @@ import { useState } from 'react';
 import { useComments } from '../hooks/useComments';
 import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
-import { Star, Trash2, Send, Edit3, X, Check } from 'lucide-react';
+import { Star, Trash2, Send, Edit3, X, Check, MessageSquare } from 'lucide-react';
 
-const ELEMENT_COLORS: Record<number, string> = {
-  1: 'var(--element-water)',
-  2: 'var(--element-earth)',
-  3: 'var(--element-fire)',
-};
-
-function parseEpisodeSeason(episodeId: string): number {
-  const match = episodeId.match(/S(\d+)E(\d+)/i);
-  if (!match) return 1;
-  const season = Number(match[1]);
-  return Number.isFinite(season) ? season : 1;
-}
+// ── ATLA renkleri (form panel arkaplanı için) ──
+const W_DEEP = 'var(--water-deep)';      // #0d1f3c — Baş Köy su tonu
 
 export default function EpisodeComments({ episodeId }: { episodeId: string }) {
-  // useComments hook'una updateComment eklendiğini varsayıyoruz
   const { comments, loading, addComment, deleteComment, updateComment } = useComments(episodeId);
   const { user } = useStore();
 
-
-  const season = parseEpisodeSeason(episodeId);
-  const elementColor = ELEMENT_COLORS[season] || 'var(--element-water)';
-  void elementColor;
-
-
-  // Form State
   const [text, setText] = useState('');
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Düzenleme State'leri
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [editRating, setEditRating] = useState(5);
@@ -43,12 +24,11 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!text.trim() || isSubmitting) return;
-
     try {
       setIsSubmitting(true);
       await addComment(text, rating);
       setText('');
-      setRating(5);
+      setRating(0);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Yorum eklenirken hata oluştu.';
       alert(message);
@@ -69,64 +49,68 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
 
   const formatDate = (timestamp: unknown): string => {
     type FirestoreTimestampLike = { toDate: () => Date };
-
     if (!timestamp) return 'Az önce';
-
     const date = (timestamp as FirestoreTimestampLike)?.toDate
       ? (timestamp as FirestoreTimestampLike).toDate()
       : new Date(timestamp as string | number | Date);
-
     if (isNaN(date.getTime())) return 'Az önce';
-
     return new Intl.DateTimeFormat('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
     }).format(date);
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-12 px-6">
+      <div className="w-full max-w-5xl mx-auto py-8 px-4 sm:px-6">
+
+
+      {/* ── Başlık ── */}
       <div className="flex items-center justify-between mb-8">
-        <h2 className="text-3xl font-serif font-bold tracking-tight" style={{ color: 'var(--parchment)' }}>Bölüm Yorumları</h2>
-        <div className="font-bold px-4 py-1.5 rounded-full text-sm" style={{ background: 'rgba(74,158,202,0.10)', border: '1px solid rgba(74,158,202,0.25)', color: 'var(--water-light)' }}>
-          {comments.length} Yorum
-        </div>
+        <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          Bölüm Yorumları
+        </h2>
+        {comments.length > 0 && (
+          <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
+            <MessageSquare size={12} className="element-water" />
+                <span className="text-xs font-semibold text-white/60">{comments.length}</span>
+
+          </div>
+        )}
       </div>
 
-      {/* Yorum Ekleme Formu */}
-      <div className="bg-[#111] border border-white/10 rounded-2xl p-6 mb-10 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-[rgba(74,158,202,0.9)] to-transparent opacity-50" />
+      {/* ── Yorum Formu (Baş Köy — su temalı panel) ── */}
+      <div className="border border-[var(--border-soft)] rounded-3xl p-6 mb-8 shadow-2xl relative overflow-hidden" style={{ background: W_DEEP }}>
+
+        {/* ince mavi üst çizgi (su tapınağı mum ışığı) */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--border-glow)] to-transparent" />
+
 
         {user ? (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex items-center gap-4 mb-2">
-              {user.photoURL && user.photoURL !== 'default' ? (
-                <img src={user.photoURL} alt="Profil" className="w-10 h-10 rounded-full border border-white/20" />
+            <div className="flex items-center gap-3">
+              {user.photoURL && user.photoURL.startsWith('/profilePics/') ? (
+                <img src={user.photoURL} alt="Profil"
+                  className="w-9 h-9 rounded-xl object-cover border border-white/10 shrink-0" />
               ) : (
-                      <div className="w-10 h-10 rounded-full bg-[#111] text-white flex items-center justify-center font-bold border border-white/20">
+                <div className="w-9 h-9 rounded-xl bg-white/5 text-white flex items-center justify-center font-bold border border-white/10 shrink-0 text-sm">
                   {user.email?.[0].toUpperCase()}
                 </div>
               )}
-
-              <div className="flex flex-col">
-                <span className="text-white text-sm font-semibold">Puanınız</span>
-                <div className="flex items-center gap-1 mt-1">
+              <div>
+                <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-1.5">Puanınız</p>
+                <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
+                    <button key={star} type="button"
                       onClick={() => setRating(star)}
                       onMouseEnter={() => setHoverRating(star)}
                       onMouseLeave={() => setHoverRating(0)}
-                      className="focus:outline-none transition-transform hover:scale-110"
-                    >
-                      <Star
-                        size={20}
-                        style={{ color: elementColor, fill: (hoverRating || rating) >= star ? elementColor : 'transparent' }}
-                        className={`transition-colors ${ (hoverRating || rating) >= star ? '' : 'text-gray-600' }`}
+                      className="focus:outline-none transition-transform hover:scale-110">
+                      <Star size={18}
+                        className={`transition-colors ${
+                          (hoverRating || rating) >= star
+                            ? 'fill-amber text-amber'
+                            : 'fill-transparent text-white/20'
+                        }`}
                       />
                     </button>
                   ))}
@@ -139,66 +123,79 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Bu bölüm hakkında ne düşünüyorsunuz?"
-                className="w-full bg-black/50 border border-white/10 text-white rounded-xl p-4 min-h-[100px] pb-14 focus:outline-none focus:border-white/30 transition-colors resize-none"
+                className="w-full border border-white/[0.08] text-white rounded-xl p-4 pb-14 min-h-[110px] focus:outline-none focus:border-[var(--border-glow)] focus:ring-1 focus:ring-[var(--water-light)] transition-colors resize-none text-sm placeholder-white/20"
                 required
               />
               <button
                 type="submit"
-                disabled={isSubmitting || !text.trim() || rating === 0} // Puan seçilmediyse basılamaz
-                style={{ background: elementColor }}
-                className="absolute bottom-3 right-3 hover:brightness-110 disabled:opacity-40 disabled:grayscale text-white p-2 px-4 rounded-lg font-bold text-sm tracking-wide flex items-center gap-2 transition-all shadow-lg"
-              >
+                disabled={isSubmitting || !text.trim() || rating === 0}
+                className="absolute bottom-3 right-3 element-fire-bg hover:element-fire-bg/80 disabled:opacity-30 disabled:grayscale text-white py-2 px-4 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg active:scale-95">
+
                 {rating === 0 ? 'Puan Seçin' : isSubmitting ? 'Gönderiliyor...' : 'Gönder'}
-                <Send size={16} />
+                <Send size={14} />
               </button>
             </div>
           </form>
         ) : (
-          <div className="py-8 flex flex-col items-center justify-center text-center">
-            <p className="text-gray-400 mb-4">Bir şeyler yazabilmek ve puan verebilmek için masaya oturmanız gerekiyor.</p>
-            <div className="px-6 py-2 bg-white/5 border border-white/10 rounded-lg text-white font-semibold">
-              Yorum yapmak için giriş yapın
-            </div>
+          <div className="py-8 flex flex-col items-center justify-center text-center gap-3">
+            <p className="text-white/30 text-sm">Yorum yazmak ve puan vermek için masaya oturmanız gerekiyor.</p>
+            <Link to="/auth"
+              className="text-xs font-bold uppercase tracking-widest element-earth hover:text-amber border border-amber/30 bg-amber/10 px-4 py-2 rounded-lg transition-colors">
+              Giriş Yap
+            </Link>
           </div>
         )}
       </div>
 
-      {/* Yorumlar Listesi */}
-      <div className="flex flex-col gap-6">
+      {/* ── Yorum Listesi ── */}
+      <div className="flex flex-col gap-3">
         {loading ? (
-          <div className="text-gray-500 flex justify-center py-10 animate-pulse">Yorumlar yükleniyor...</div>
+          <div className="flex justify-center py-16">
+            <div className="w-6 h-6 border-2 element-water border-t-transparent rounded-full animate-spin" />
+          </div>
         ) : comments.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-white/10 rounded-2xl">
-            <p className="text-gray-500 font-serif italic text-lg">Bu bölüme henüz kimse not bırakmamış.</p>
-            <p className="text-gray-600 text-sm mt-2">İlk yazan sen ol.</p>
+          <div className="text-center py-16 border border-dashed border-white/[0.07] rounded-2xl">
+            <MessageSquare size={28} className="text-white/10 mx-auto mb-3" />
+            <p className="text-white/20 font-serif italic text-base">Bu bölüme henüz kimse not bırakmamış.</p>
+            <p className="text-white/10 text-sm mt-1">İlk yazan sen ol.</p>
           </div>
         ) : (
           comments.map((comment) => (
-            <div key={comment.id} className="group relative bg-[#0a0a0a] border border-white/5 hover:border-white/10 rounded-2xl p-6 transition-all">
-
+            <div
+              key={comment.id}
+              className="group relative bg-[#111] border border-white/10 hover:border-white/20 rounded-3xl p-5 sm:p-6 transition-all"
+            >
               <div className="flex gap-4 items-start">
-                <div className="shrink-0 mt-1">
-                  <Link to={`/profile/${comment.userName}`}>
-                    {comment.userPhoto && comment.userPhoto !== 'default' ? (
-                      <img src={comment.userPhoto} alt={comment.userName || 'Kullanıcı'} className="w-12 h-12 rounded-full border border-white/10 hover:border-white/20 transition-colors" />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-[#1a1a1a] flex items-center justify-center text-gray-400 border border-white/5 hover:border-white/20 transition-colors font-bold uppercase">
-                        {comment.userName ? comment.userName[0] : '?'}
-                      </div>
-                    )}
-                  </Link>
-                </div>
+                {/* Avatar */}
+                <Link to={`/profile/${comment.userName}`} className="shrink-0 mt-0.5">
+                  {comment.userPhoto && comment.userPhoto.startsWith('/profilePics/') ? (
+                    <img
+                      src={comment.userPhoto}
+                      alt={comment.userName || 'Kullanıcı'}
+                      className="w-10 h-10 rounded-xl object-cover border border-white/[0.08] hover:border-white/20 transition-colors"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/40 border border-white/[0.06] hover:border-white/20 transition-colors font-bold uppercase text-sm">
+                      {comment.userName ? comment.userName[0] : '?'}
+                    </div>
+                  )}
+                </Link>
 
+                {/* İçerik */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <Link to={`/profile/${comment.userName}`} className="text-white hover:text-red-500 transition-colors font-bold text-sm tracking-wide">
+                  <div className="flex items-center justify-between mb-2.5 gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <Link
+                        to={`/profile/${comment.userName}`}
+                        className="text-sm font-bold text-white hover:text-amber transition-colors tracking-wide"
+                      >
                         {comment.userName}
                       </Link>
-                      <span className="text-gray-600 text-xs">• {formatDate(comment.createdAt)}</span>
+                      <span className="text-white/20 text-xs">·</span>
+                      <span className="text-white/25 text-xs">{formatDate(comment.createdAt)}</span>
                     </div>
 
-                    {/* Yıldızlar (Düzenleme modunda değiştirilebilir) */}
+                    {/* Yıldızlar */}
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
@@ -207,25 +204,21 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                           onClick={() => setEditRating(star)}
                           onMouseEnter={() => editingId === comment.id && setHoverEditRating(star)}
                           onMouseLeave={() => editingId === comment.id && setHoverEditRating(0)}
-                          className={`${editingId === comment.id ? 'cursor-pointer hover:scale-125 transition-transform' : 'cursor-default'}`}
+                          className={
+                            editingId === comment.id
+                              ? 'cursor-pointer hover:scale-125 transition-transform'
+                              : 'cursor-default'
+                          }
                         >
                           <Star
-                            size={20}
-                            style={{
-                              fill:
-                                (editingId === comment.id
-                                  ? (hoverEditRating || editRating)
-                                  : Number(comment.rating) || 0) >= star
-                                  ? elementColor
-                                  : 'transparent',
-                              color:
-                                (editingId === comment.id
-                                  ? (hoverEditRating || editRating)
-                                  : Number(comment.rating) || 0) >= star
-                                  ? elementColor
-                                  : '#ffffff20'
-                            }}
-                            className="transition-colors"
+                            size={15}
+                            className={`transition-colors ${
+                              (editingId === comment.id
+                                ? (hoverEditRating || editRating)
+                                : Number(comment.rating) || 0) >= star
+                                ? 'fill-amber text-amber'
+                                : 'fill-transparent text-white/10'
+                            }`}
                           />
                         </button>
                       ))}
@@ -233,38 +226,37 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                   </div>
 
                   {editingId === comment.id ? (
-                    <div className="mt-2">
+                    <div>
                       <textarea
                         value={editText}
                         onChange={(e) => setEditText(e.target.value)}
-                        className="w-full bg-black border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none min-h-[80px] resize-none"
+                        className="w-full border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--border-glow)] min-h-[80px] resize-none"
                         autoFocus
                       />
                       <div className="flex justify-end gap-2 mt-2">
                         <button
                           onClick={() => setEditingId(null)}
-                          className="p-2 text-gray-400 hover:text-white transition-colors"
+                          className="p-2 text-white/30 hover:text-white transition-colors"
                         >
-                          <X size={16} />
+                          <X size={15} />
                         </button>
                         <button
                           onClick={() => handleUpdate(comment.id)}
-                          style={{ background: elementColor }}
-                          className="p-2 text-white rounded-md hover:brightness-110 transition-colors"
+                          className="p-2 element-fire-bg hover:element-fire-bg/80 text-white rounded-lg transition-colors"
                         >
-                          <Check size={16} />
+                          <Check size={15} />
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-300 leading-relaxed text-sm/6 break-words whitespace-pre-wrap">
+                    <p className="text-white/60 leading-relaxed text-sm whitespace-pre-wrap break-words">
                       {comment.text}
                     </p>
                   )}
                 </div>
               </div>
 
-              {/* İşlem Butonları (Sadece sahibi için) */}
+              {/* Düzenle / Sil (sadece sahip) */}
               {user && user.uid === comment.userId && editingId !== comment.id && (
                 <div className="absolute bottom-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                   <button
@@ -273,22 +265,25 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                       setEditText(comment.text);
                       setEditRating(comment.rating);
                     }}
-                    className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                    className="p-2 text-white/20 hover:text-white hover:bg-white/5 rounded-lg transition-all"
                     title="Düzenle"
                   >
-                    <Edit3 size={16} />
+                    <Edit3 size={14} />
                   </button>
                   <button
                     onClick={() => {
-                      if (window.confirm("Bu yorumunuzu silmek istediğinize emin misiniz?")) {
+                      if (
+                        window.confirm(
+                          'Bu yorumunuzu silmek istediğinize emin misiniz?'
+                        )
+                      ) {
                         deleteComment(comment.id);
                       }
                     }}
-                    style={{ color: elementColor }}
-                    className="p-2 text-gray-500 hover:text-white hover:bg-white/5 rounded-lg transition-all"
+                    className="p-2 text-white/20 hover:text-amber hover:bg-amber/10 rounded-lg transition-all"
                     title="Yorumu Sil"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               )}

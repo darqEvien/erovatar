@@ -261,7 +261,7 @@ export default function ProfilePage() {
 
   if (profileLoading) return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 element-water border-t-transparent rounded-full animate-spin" />
     </div>
   );
 
@@ -307,7 +307,7 @@ export default function ProfilePage() {
               {viewingOwnProfile && selectedAvatar && `/profilePics/${selectedAvatar}` !== displayPhoto && (
                 <div className="absolute -bottom-1 -right-1">
                   <img src={`/profilePics/${selectedAvatar}`} alt="Yeni"
-                    className="w-8 h-8 rounded-full object-cover border-2 border-red-500" />
+                    className="w-8 h-8 rounded-full object-cover border-2 element-water" />
                 </div>
               )}
             </div>
@@ -316,7 +316,7 @@ export default function ProfilePage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-2xl sm:text-3xl font-serif font-bold tracking-tight">{displayName}</h1>
                 {viewingOwnProfile && (
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-red-500 border border-red-500/30 bg-red-500/10 px-2 py-0.5 rounded-full">Sen</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-amber border-amber/30 bg-amber/10 px-2 py-0.5 rounded-full">Sen</span>
                 )}
               </div>
               <p className="text-gray-600 text-xs mt-1.5 flex items-center gap-1.5">
@@ -330,14 +330,14 @@ export default function ProfilePage() {
           <div className="flex border-t border-white/10">
             <button
               onClick={() => setActiveTab('comments')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all border-b-2 ${activeTab === 'comments' ? 'text-white border-red-500' : 'text-gray-500 hover:text-gray-300 border-transparent'}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all border-b-2 ${activeTab === 'comments' ? 'text-white border-amber' : 'text-gray-500 hover:text-gray-300 border-transparent'}`}
             >
               <MessageSquare size={15} /> Yorumlar
             </button>
             {viewingOwnProfile && (
               <button
                 onClick={() => setActiveTab('settings')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all border-b-2 ${activeTab === 'settings' ? 'text-white border-red-500' : 'text-gray-500 hover:text-gray-300 border-transparent'}`}
+                className={`flex-1 flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-all border-b-2 ${activeTab === 'settings' ? 'text-white border-amber' : 'text-gray-500 hover:text-gray-300 border-transparent'}`}
               >
                 <Settings size={15} /> Ayarlar
               </button>
@@ -350,7 +350,7 @@ export default function ProfilePage() {
           <div className="mt-4 space-y-3">
             {commentsLoading ? (
               <div className="flex justify-center py-16">
-                <div className="w-7 h-7 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+                <div className="w-7 h-7 border-2 element-water border-t-transparent rounded-full animate-spin" />
               </div>
             ) : comments.length === 0 ? (
               <div className="bg-[#111] border border-white/10 rounded-2xl p-12 text-center">
@@ -369,7 +369,7 @@ export default function ProfilePage() {
                     {parsed && (
                       <Link to={`/watch/${parsed.season}/${parsed.episode}`} className="inline-flex mb-3">
                         <div className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 transition-all">
-                          <Tv size={12} className="text-red-500 shrink-0" />
+                          <Tv size={12} className="element-water shrink-0" />
                           <span className="text-xs text-gray-300 font-medium">
                             Sezon {parsed.season} · Bölüm {parsed.episode} {ep ? `- ${ep.title}` : ''}
                           </span>
@@ -380,7 +380,7 @@ export default function ProfilePage() {
                     {!parsed && c.episodeId && (
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
-                          <Tv size={12} className="text-red-500 shrink-0" />
+                          <Tv size={12} className="element-water shrink-0" />
                           <span className="text-xs text-gray-400 font-medium">{c.episodeId}</span>
                         </div>
                       </div>
@@ -393,7 +393,7 @@ export default function ProfilePage() {
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                         </button>
-                        <button onClick={() => handleDeleteComment(c.id)} className="p-2 text-gray-500 hover:text-red-500 transition-colors">
+                        <button onClick={() => handleDeleteComment(c.id)} className="p-2 text-gray-500 hover:text-amber transition-colors">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -404,7 +404,7 @@ export default function ProfilePage() {
                         <textarea
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
-                          className="w-full bg-black border border-red-500/50 text-white rounded-lg p-3 text-sm focus:outline-none min-h-[80px] resize-none"
+                          className="w-full bg-black border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--border-glow)] min-h-[80px] resize-none"
                           autoFocus
                         />
                         <div className="flex items-center gap-1 mt-2 mb-2">
@@ -413,7 +413,7 @@ export default function ProfilePage() {
                               onMouseEnter={() => setHoverEditRating(star)}
                               onMouseLeave={() => setHoverEditRating(0)}
                               className="focus:outline-none hover:scale-125 transition-transform">
-                              <Star size={16} className={`transition-colors ${(hoverEditRating || editRating) >= star ? 'fill-red-500 text-red-500' : 'text-white/10 fill-white/5'}`} />
+                              <Star size={16} className={`transition-colors ${(hoverEditRating || editRating) >= star ? 'fill-amber text-amber' : 'text-white/10 fill-white/5'}`} />
                             </button>
                           ))}
                         </div>
@@ -421,7 +421,7 @@ export default function ProfilePage() {
                           <button onClick={() => setEditingId(null)} className="p-2 text-gray-400 hover:text-white transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                           </button>
-                          <button onClick={() => handleUpdateComment(c.id)} className="p-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+                          <button onClick={() => handleUpdateComment(c.id)} className="p-2 element-fire-bg text-white rounded-md hover:element-fire-bg/80 transition-colors">
                             <Check size={16} />
                           </button>
                         </div>
@@ -432,7 +432,7 @@ export default function ProfilePage() {
                         <p className="text-gray-600 text-xs mt-3">{formatDate(c.createdAt)}</p>
                         <div className="flex items-center gap-0.5 mt-2">
                           {[1, 2, 3, 4, 5].map((star) => (
-                            <Star key={star} size={14} className={(Number(c.rating) || 0) >= star ? 'fill-red-500 text-red-500' : 'text-white/10 fill-white/5'} />
+                            <Star key={star} size={14} className={(Number(c.rating) || 0) >= star ? 'fill-amber text-amber' : 'text-white/10 fill-white/5'} />
                           ))}
                         </div>
                       </>
@@ -466,7 +466,7 @@ export default function ProfilePage() {
                   required
                   value={formUsername}
                   onChange={(e) => setFormUsername(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-all font-medium"
+                  className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--border-glow)] focus:ring-1 focus:ring-[var(--water-light)] transition-all font-medium"
                 />
               </div>
 
@@ -476,7 +476,7 @@ export default function ProfilePage() {
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Karakter Seç</label>
                   {selectedAvatar && (
                     <button type="button" onClick={() => setSelectedAvatar(null)}
-                      className="text-[10px] text-gray-500 hover:text-red-400 uppercase tracking-widest transition-colors">
+                      className="text-[10px] text-gray-500 hover:text-amber uppercase tracking-widest transition-colors">
                       Seçimi Kaldır
                     </button>
                   )}

@@ -6,11 +6,11 @@ import { type Episode, getVideoUrl, getSubtitleUrl, getNextEpisode } from '../da
 import { useStore } from '../store/useStore';
 import { srtToVttBlob } from '../lib/srtParser';
 import { useFirebaseProgress } from '../hooks/useFirebaseProgress';
-import { useNavigate } from 'react-router-dom';
 
 interface VideoPlayerProps {
   episode: Episode;
   mini?: boolean;
+  onGoNext?: () => void;
 }
 
 // Thumbnail URL: /videos/s1/e1/thumbnails.jpg
@@ -21,11 +21,10 @@ function getThumbnailVttUrl(episode: Episode): string {
   return `${base}/videos/s${episode.season}/e${episode.episode}/thumbnails.vtt`;
 }
 
-export default function VideoPlayer({ episode, mini = false }: VideoPlayerProps) {
+export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPlayerProps) {
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const navigate = useNavigate();
   const { user, subtitleLanguage, autoPlayNext } = useStore();
   const { saveProgress, getProgress, loading } = useFirebaseProgress();
 
@@ -65,8 +64,8 @@ export default function VideoPlayer({ episode, mini = false }: VideoPlayerProps)
 
   // ── Next episode countdown ─────────────────────────────────────────────────
   const goToNextEpisode = useCallback(() => {
-    if (nextEpisode) navigate(`/watch/${nextEpisode.season}/${nextEpisode.episode}`);
-  }, [nextEpisode, navigate]);
+    if (nextEpisode) onGoNext?.();
+  }, [nextEpisode, onGoNext]);
 
   useEffect(() => {
     if (showNextEpisode && countdown > 0) {

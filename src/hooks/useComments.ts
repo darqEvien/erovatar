@@ -17,10 +17,13 @@ export interface Comment {
 export function useComments(episodeId: string) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useStore();
 
   useEffect(() => {
     if (!episodeId) return;
+    setLoading(true);
+    setError(null);
 
     const q = query(
       collectionGroup(db, 'comments'),
@@ -42,9 +45,13 @@ export function useComments(episodeId: string) {
       });
       setComments(fetched);
       setLoading(false);
-    }, (error) => {
-      console.warn("Hata:", error.message);
+      setError(null);
+    }, (err) => {
+      // Sessizce yutmak yerine durumu dışarı veriyoruz: çoğunlukla eksik bir
+      // Firestore composite index ya da güvenlik kuralı reddi burada yakalanır.
+      console.warn("Yorumlar çekilirken hata:", err.message);
       setLoading(false);
+      setError(err.message);
     });
 
     return () => unsubscribe();
@@ -80,6 +87,9 @@ export function useComments(episodeId: string) {
       });
     } catch (error) {
       console.error("Ekleme hatası:", error);
+      // Hatayı yutmuyoruz: çağıran taraf (form) kullanıcıya gerçek bir
+      // hata mesajı gösterebilsin diye yeniden fırlatıyoruz.
+      throw error;
     }
   }, [episodeId, user]);
   const deleteComment = useCallback(async (commentId: string) => {
@@ -95,6 +105,7 @@ export function useComments(episodeId: string) {
   return {
     comments,
     loading,
+    error,
     addComment,
     deleteComment,
     updateComment

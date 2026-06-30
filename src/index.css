@@ -6,6 +6,23 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-serif: 'Cinzel', Georgia, Cambria, 'Times New Roman', Times, serif;
   --font-decorative: 'Cinzel Decorative', serif;
+
+  /* Tailwind'in text-amber / bg-amber / fill-amber / border-amber gibi utility
+     class'ları üretebilmesi için renk token'ları @theme içinde tanımlanmalı.
+     Önceden bu renkler sadece :root altında tanımlıydı ve Tailwind v4 onları
+     görmüyordu — yani uygulamadaki tüm "amber" class'ları sessizce hiçbir şey
+     yapmıyordu (yıldızlar, "Sen" rozeti, hover renkleri vs.). */
+  --color-night:        #070d1a;
+  --color-water-deep:   #0d1f3c;
+  --color-water-mid:    #1a3a5c;
+  --color-water-light:  #4a9eca;
+  --color-amber:        #c4813a;
+  --color-amber-bright: #e09c4c;
+  --color-parchment:    #e8d5a3;
+  --color-stone:        #8a9bb5;
+  --color-element-water: #4a9eca;
+  --color-element-earth: #7a9c4a;
+  --color-element-fire:  #c45a3a;
 }
 
 /* ====== AVATAR DESIGN TOKENS ====== */

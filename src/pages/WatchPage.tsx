@@ -3,7 +3,7 @@ import { getEpisode, getSeasonByNumber, getNextEpisode, getPreviousEpisode } fro
 import VideoPlayer from '../components/VideoPlayer';
 import { useFirebaseProgress } from '../hooks/useFirebaseProgress';
 import { ArrowLeft, ArrowRight, ListVideo, Home, X, PlayCircle, CheckCircle, Monitor, MonitorOff, User } from 'lucide-react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
 import EpisodeComments from '../components/EpisodeComments';
@@ -41,18 +41,37 @@ export default function WatchPage() {
   // ── Smooth oto-geçiş overlay ────────────────────────────────────────────────
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(0);
+  const fadeOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (fadeOutTimer.current) clearTimeout(fadeOutTimer.current);
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+    };
+  }, []);
+
+  const FADE_OUT_MS = 420; // siyaha kararma süresi
+  const FADE_IN_MS = 480;  // yeni bölümden geri dönüş süresi
 
   const smoothNavigateToNext = useCallback(() => {
     if (!nextEpisode || isTransitioning) return;
-    // Phase 1: fade to black (0–350ms)
+    // Phase 1: ekranı element rengine yakın bir tonla kararta kararta siyaha söndür
     setIsTransitioning(true);
     setOverlayOpacity(1);
-    setTimeout(() => {
-      // Phase 2: navigate while black (user sees nothing jarring)
+
+    if (fadeOutTimer.current) clearTimeout(fadeOutTimer.current);
+    fadeOutTimer.current = setTimeout(() => {
+      // Phase 2: tamamen siyahken sayfayı değiştir (kullanıcı sıçramayı görmez)
       navigate(`/watch/${nextEpisode.season}/${nextEpisode.episode}`);
-      // Phase 3: fade back (400–750ms, after new episode is mounted)
-      setOverlayOpacity(0);
-    }, 400);
+      // Yeni bölüm DOM'a yerleşsin diye bir frame bekleyip geri açıyoruz
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setOverlayOpacity(0));
+      });
+      // Phase 3: fade-in bitince kilidi kaldır, bir sonraki oto-geçişe izin ver
+      if (resetTimer.current) clearTimeout(resetTimer.current);
+      resetTimer.current = setTimeout(() => setIsTransitioning(false), FADE_IN_MS + 60);
+    }, FADE_OUT_MS);
   }, [nextEpisode, isTransitioning, navigate]);
 
   const elementColor = ELEMENT_COLORS[season];
@@ -65,7 +84,10 @@ export default function WatchPage() {
 
   if (!episode) return <Navigate to="/" />;
 
-  const springTransition = 'all 0.85s cubic-bezier(0.34, 1.56, 0.64, 1)';
+  // Layout değişiklikleri (genişlik, padding, opacity) için doğal, sönümlü bir eğri —
+  // zıplama yok, göz yormuyor. Video kutusunun "sinematik zoom" hissi ayrı tutuluyor.
+  const layoutTransition = 'all 0.6s cubic-bezier(0.65, 0, 0.35, 1)';
+  const springTransition = 'all 0.75s cubic-bezier(0.22, 1, 0.36, 1)';
 
   // ── Playlist Panel ──────────────────────────────────────────────────────────
   const PlaylistContent = ({ isDrawer = false }: { isDrawer?: boolean }) => (
@@ -210,13 +232,32 @@ export default function WatchPage() {
 
       {/* ── Oto-geçiş fade overlay ──────────────────────────────────────────── */}
       <div
-        className="fixed inset-0 z-[200] pointer-events-none"
+        className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center"
         style={{
           background: 'var(--night)',
           opacity: overlayOpacity,
-          transition: 'opacity 0.4s ease',
+          transition: `opacity ${overlayOpacity ? FADE_OUT_MS : FADE_IN_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
         }}
-      />
+      >
+        <div
+          className="flex flex-col items-center gap-3"
+          style={{
+            opacity: overlayOpacity,
+            transform: `scale(${overlayOpacity ? 1 : 0.94})`,
+            transition: `opacity 0.35s ease ${overlayOpacity ? '0.1s' : '0s'}, transform 0.35s ease ${overlayOpacity ? '0.1s' : '0s'}`,
+          }}
+        >
+          <div
+            className="w-9 h-9 rounded-full border-2 animate-spin"
+            style={{ borderColor: `${elementColor}33`, borderTopColor: elementColor }}
+          />
+          {nextEpisode && (
+            <p className="avatar-title text-[10px] font-bold uppercase tracking-[0.25em]" style={{ color: 'var(--stone)' }}>
+              Sonraki Bölüme Geçiliyor
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* ── Top Nav ── */}
       <div
@@ -261,7 +302,7 @@ export default function WatchPage() {
           style={{
             opacity: mode === 'sinematik' ? 1 : 0,
             transform: `translate(-50%, ${mode === 'sinematik' ? '0' : '-8px'})`,
-            transition: springTransition,
+            transition: layoutTransition,
           }}
         >
           <p className="avatar-title text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: elementColor }}>
@@ -296,7 +337,7 @@ export default function WatchPage() {
           {/* Sinematik mod: Playlist button */}
           <div
             className="overflow-hidden whitespace-nowrap"
-            style={{ width: mode === 'sinematik' ? '130px' : '0px', opacity: mode === 'sinematik' ? 1 : 0, marginLeft: mode === 'sinematik' ? '4px' : '0px', transition: springTransition }}
+            style={{ width: mode === 'sinematik' ? '130px' : '0px', opacity: mode === 'sinematik' ? 1 : 0, marginLeft: mode === 'sinematik' ? '4px' : '0px', transition: layoutTransition }}
           >
             <button
               onClick={() => setIsPlaylistOpen(!isPlaylistOpen)}
@@ -320,7 +361,7 @@ export default function WatchPage() {
           gap: mode === 'sinematik' ? '0' : '32px',
           padding: mode === 'sinematik' ? '0' : '24px',
           paddingTop: mode === 'sinematik' ? '0' : '100px',
-          transition: springTransition,
+          transition: layoutTransition,
         }}
       >
 
@@ -333,7 +374,7 @@ export default function WatchPage() {
             style={{
               minHeight: mode === 'sinematik' ? '100vh' : 'auto',
               background: mode === 'sinematik' ? '#000' : 'transparent',
-              transition: springTransition,
+              transition: layoutTransition,
             }}
           >
             <div
@@ -359,7 +400,7 @@ export default function WatchPage() {
             style={{
               maxWidth: mode === 'sinematik' ? '1100px' : '100%',
               padding: mode === 'sinematik' ? '60px 16px' : '24px 0 0 0',
-              transition: springTransition,
+              transition: layoutTransition,
             }}
           >
             {/* Title + nav */}
@@ -379,7 +420,7 @@ export default function WatchPage() {
                       opacity: mode === 'sinematik' ? 0 : 1,
                       height: mode === 'sinematik' ? 0 : 'auto',
                       color: 'var(--stone)',
-                      transition: springTransition,
+                      transition: layoutTransition,
                     }}
                   >
                     Bölüm {epNum}
@@ -392,7 +433,7 @@ export default function WatchPage() {
                     fontSize: mode === 'sinematik' ? '2rem' : '1.5rem',
                     color: 'var(--parchment)',
                     lineHeight: 1.2,
-                    transition: springTransition,
+                    transition: layoutTransition,
                   }}
                 >
                   {episode.title}
@@ -432,7 +473,7 @@ export default function WatchPage() {
               style={{
                 background: mode === 'sinematik' ? 'transparent' : 'var(--water-mid)',
                 border: mode === 'sinematik' ? 'none' : '1px solid var(--border-soft)',
-                transition: springTransition,
+                transition: layoutTransition,
                 maxWidth: mode === 'sinematik' ? '700px' : '100%',
               }}
             >
@@ -449,7 +490,7 @@ export default function WatchPage() {
         {/* ── Right: Playlist (normal mode) ── */}
         <div
           className="overflow-hidden shrink-0"
-          style={{ width: mode === 'normal' ? '380px' : '0px', opacity: mode === 'normal' ? 1 : 0, transition: springTransition }}
+          style={{ width: mode === 'normal' ? '380px' : '0px', opacity: mode === 'normal' ? 1 : 0, transition: layoutTransition }}
         >
           <div className="w-[380px]">
             <PlaylistContent />

@@ -13,12 +13,157 @@ interface VideoPlayerProps {
   onGoNext?: () => void;
 }
 
-// Thumbnail URL: /videos/s1/e1/thumbnails.jpg
-// Thumbnail VTT: /videos/s1/e1/thumbnails.vtt
+// Thumbnail URL: /s1/e1/thumbnails.jpg
+// Thumbnail VTT: /s1/e1/thumbnails.vtt
+// NOT: video ve altyazı URL'leriyle aynı kök (getVideoUrl/getSubtitleUrl'deki gibi
+// R2_BASE + /s{season}/e{episode}/...) — önceden burada fazladan bir "videos/"
+// segmenti vardı ve bucket'taki gerçek yapıyla eşleşmediği için VTT hiç yüklenmiyordu.
 function getThumbnailVttUrl(episode: Episode): string {
   const R2_BASE = (import.meta.env.VITE_R2_BASE_URL as string | undefined)?.replace(/\/$/, '') ?? '';
-  const base = R2_BASE || '';
-  return `${base}/videos/s${episode.season}/e${episode.episode}/thumbnails.vtt`;
+  return `${R2_BASE}/s${episode.season}/e${episode.episode}/thumbnails.vtt`;
+}
+
+// ── Sprite thumbnail (scrub-bar hover preview) ───────────────────────────────
+interface ThumbCue { start: number; end: number; url: string; x: number; y: number; w: number; h: number; }
+
+// Basit bir WebVTT sprite-thumbnail ayrıştırıcısı.
+// Beklenen format:
+//   00:00:00.000 --> 00:00:10.000
+//   thumbnails.jpg#xywh=0,0,160,90
+function parseThumbnailVtt(text: string, vttUrl: string): ThumbCue[] {
+  const base = vttUrl.slice(0, vttUrl.lastIndexOf('/') + 1);
+  const timeRe = /(\d{2}):(\d{2}):(\d{2})[.,](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[.,](\d{3})/;
+  const toSec = (h: string, m: string, s: string, ms: string) => (+h) * 3600 + (+m) * 60 + (+s) + (+ms) / 1000;
+  const lines = text.split(/\r?\n/);
+  const cues: ThumbCue[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(timeRe);
+    if (!m) continue;
+    const start = toSec(m[1], m[2], m[3], m[4]);
+    const end = toSec(m[5], m[6], m[7], m[8]);
+    const dataLine = (lines[i + 1] || '').trim();
+    if (!dataLine) continue;
+
+    const [file, frag] = dataLine.split('#xywh=');
+    const url = /^https?:\/\//.test(file) ? file : base + file;
+    if (frag) {
+      const [x, y, w, h] = frag.split(',').map(Number);
+      cues.push({ start, end, url, x, y, w, h });
+    } else {
+      cues.push({ start, end, url, x: 0, y: 0, w: 0, h: 0 });
+    }
+  }
+  return cues;
+}
+
+function formatScrubTime(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Video.js'in progress bar'ı üzerine YouTube benzeri bir scrub-thumbnail önizlemesi
+// bağlar. video.js çekirdeği VTT sprite cue'larını otomatik render etmiyor, bu yüzden
+// imperative olarak kendi DOM elemanlarımızı oluşturup mousemove ile besliyoruz.
+function attachScrubThumbnailPreview(player: Player, rootEl: HTMLElement, cues: ThumbCue[]): (() => void) | null {
+  const progressControl = rootEl.querySelector('.vjs-progress-control') as HTMLElement | null;
+  if (!progressControl) return null;
+
+  if (!progressControl.style.position) progressControl.style.position = 'relative';
+
+  const preview = document.createElement('div');
+  preview.className = 'vjs-scrub-thumb-preview';
+  Object.assign(preview.style, {
+    position: 'absolute',
+    bottom: '26px',
+    left: '0px',
+    pointerEvents: 'none',
+    opacity: '0',
+    transform: 'translateX(-50%)',
+    transition: 'opacity 0.12s ease',
+    zIndex: '70',
+  } as CSSStyleDeclaration);
+
+  const frame = document.createElement('div');
+  Object.assign(frame.style, {
+    borderRadius: '8px',
+    border: '2px solid var(--water-light)',
+    boxShadow: '0 10px 28px rgba(0,0,0,0.65)',
+    backgroundColor: '#000',
+    backgroundRepeat: 'no-repeat',
+    overflow: 'hidden',
+  } as CSSStyleDeclaration);
+
+  const timeLabel = document.createElement('div');
+  Object.assign(timeLabel.style, {
+    textAlign: 'center',
+    marginTop: '4px',
+    fontSize: '11px',
+    fontWeight: '700',
+    color: 'var(--parchment)',
+    fontFamily: "'Cinzel', serif",
+    letterSpacing: '0.04em',
+    textShadow: '0 1px 4px rgba(0,0,0,0.85)',
+  } as CSSStyleDeclaration);
+
+  preview.appendChild(frame);
+  preview.appendChild(timeLabel);
+  progressControl.appendChild(preview);
+
+  const findCue = (time: number): ThumbCue | null => {
+    if (!cues.length) return null;
+    // Cue'lar sıralı: doğrusal aramak yeterince hızlı (bölüm başına genelde birkaç yüz cue)
+    for (const c of cues) {
+      if (time >= c.start && time < c.end) return c;
+    }
+    return time >= cues[cues.length - 1].end ? cues[cues.length - 1] : cues[0];
+  };
+
+  const handleMove = (clientX: number) => {
+    const duration = player.duration() || 0;
+    if (!duration) return;
+    const rect = progressControl.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+    const hoverTime = ratio * duration;
+    const cue = findCue(hoverTime);
+    if (!cue) return;
+
+    if (cue.w && cue.h) {
+      frame.style.width = `${cue.w}px`;
+      frame.style.height = `${cue.h}px`;
+      frame.style.backgroundImage = `url("${cue.url}")`;
+      frame.style.backgroundPosition = `-${cue.x}px -${cue.y}px`;
+    }
+    timeLabel.textContent = formatScrubTime(hoverTime);
+
+    const previewWidth = cue.w || 160;
+    const clampedLeft = Math.min(
+      Math.max(clientX - rect.left, previewWidth / 2 + 4),
+      rect.width - previewWidth / 2 - 4
+    );
+    preview.style.left = `${clampedLeft}px`;
+    preview.style.opacity = '1';
+  };
+
+  const onMouseMove = (e: MouseEvent) => handleMove(e.clientX);
+  const onMouseLeave = () => { preview.style.opacity = '0'; };
+  const onTouchMove = (e: TouchEvent) => { if (e.touches[0]) handleMove(e.touches[0].clientX); };
+  const onTouchEnd = () => { preview.style.opacity = '0'; };
+
+  progressControl.addEventListener('mousemove', onMouseMove);
+  progressControl.addEventListener('mouseleave', onMouseLeave);
+  progressControl.addEventListener('touchmove', onTouchMove, { passive: true });
+  progressControl.addEventListener('touchend', onTouchEnd);
+
+  return () => {
+    progressControl.removeEventListener('mousemove', onMouseMove);
+    progressControl.removeEventListener('mouseleave', onMouseLeave);
+    progressControl.removeEventListener('touchmove', onTouchMove);
+    progressControl.removeEventListener('touchend', onTouchEnd);
+    preview.remove();
+  };
 }
 
 export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPlayerProps) {
@@ -135,15 +280,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
     const player = (videojs as any)(videoElement, playerOptions);
     playerRef.current = player;
 
-    // ── Thumbnail VTT (sprite preview on hover) ──────────────────────────────
-    // video.js reads metadata text tracks for thumbnail display
-    const thumbVttUrl = getThumbnailVttUrl(episode);
-    player.addRemoteTextTrack({
-      kind: 'metadata',
-      label: 'thumbnails',
-      src: thumbVttUrl,
-      default: false,
-    }, false);
+    let isDisposing = false;
 
     // ── Subtitles ─────────────────────────────────────────────────────────────
     const fetchAndAddTrack = async (url: string, lang: 'tr' | 'en', label: string) => {
@@ -164,7 +301,6 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       }
     };
 
-    let isDisposing = false;
     let trackChangeListener: (() => void) | null = null;
     let cachedTracks: any = null;
 
@@ -218,6 +354,22 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
 
     // ── Double tap mobile ──────────────────────────────────────────────────────
     const videoElementNode = player.el();
+
+    // ── Thumbnail VTT (sprite preview on hover) ──────────────────────────────
+    let thumbCleanup: (() => void) | null = null;
+    if (!mini) {
+      const thumbVttUrl = getThumbnailVttUrl(episode);
+      fetch(thumbVttUrl)
+        .then(res => { if (!res.ok) throw new Error(`thumbnails.vtt bulunamadı (${res.status})`); return res.text(); })
+        .then(text => {
+          if (isDisposing) return;
+          const cues = parseThumbnailVtt(text, thumbVttUrl);
+          if (!cues.length) return;
+          thumbCleanup = attachScrubThumbnailPreview(player, videoElementNode, cues);
+        })
+        .catch(err => console.warn('Thumbnail VTT yüklenemedi:', err.message));
+    }
+
     let lastTapTime = 0;
     videoElementNode.addEventListener('touchstart', (e: TouchEvent) => {
       const target = e.target as HTMLElement;
@@ -313,6 +465,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       if (cachedTracks && trackChangeListener) {
         try { cachedTracks.removeEventListener('change', trackChangeListener); } catch {}
       }
+      if (thumbCleanup) thumbCleanup();
       if (playerRef.current && !playerRef.current.isDisposed()) {
         playerRef.current.dispose();
         playerRef.current = null;

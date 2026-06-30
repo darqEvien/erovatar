@@ -8,7 +8,7 @@ import { Star, Trash2, Send, Edit3, X, Check, MessageSquare } from 'lucide-react
 const W_DEEP = 'var(--water-deep)';      // #0d1f3c — Baş Köy su tonu
 
 export default function EpisodeComments({ episodeId }: { episodeId: string }) {
-  const { comments, loading, addComment, deleteComment, updateComment } = useComments(episodeId);
+  const { comments, loading, error, addComment, deleteComment, updateComment } = useComments(episodeId);
   const { user } = useStore();
 
   const [text, setText] = useState('');
@@ -149,6 +149,18 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
 
       {/* ── Yorum Listesi ── */}
       <div className="flex flex-col gap-3">
+        {error && (
+          <div
+            className="flex items-start gap-3 rounded-2xl p-4 text-sm"
+            style={{ background: 'rgba(196,90,58,0.1)', border: '1px solid rgba(196,90,58,0.35)', color: 'var(--parchment)' }}
+          >
+            <span className="element-fire font-bold shrink-0">!</span>
+            <div>
+              <p className="font-semibold mb-0.5">Yorumlar yüklenemedi.</p>
+              <p className="text-xs opacity-70 break-words">{error}</p>
+            </div>
+          </div>
+        )}
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="w-6 h-6 border-2 element-water border-t-transparent rounded-full animate-spin" />

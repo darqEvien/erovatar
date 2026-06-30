@@ -54,7 +54,7 @@ export default function AboutPage() {
               Avatar: Son Hava Bükücü'yü izlemek canım çekti. Madem sopranos'a yaptık buna da yapabiliriz dedim.
             </p>
             <p>
-              Tek istediğim hangi bölümde kaldığımı hatırlayıp yemek yerken telefondan da izleyebilmekti. Madem yapıyorum diye biraz daha tam yapalım dedim; yorum sistemi, ilerleme takibi ve avatar teması da eklendi.
+              Tek istediğim hangi bölümde kaldığımı hatırlayıp yemek yerken telefondan da izleyebilmekti. Madem yapıyorum diye biraz daha tam yapalım dedim; yorum sistemi, ilerleme takibi ve avatar temasına döndürdüm.
             </p>
 
             {/* Element divider */}

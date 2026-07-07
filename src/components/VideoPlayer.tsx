@@ -195,6 +195,17 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
   const nextEpisodeTriggeredRef = useRef(false);
   const skippedIntroRef = useRef(false);
 
+  // ── Zaman damgası "göz atma" (peek) modu ────────────────────────────────────
+  // Bir yorumdaki "@12:53" linkine tıklanarak (ya da ?t= ile sayfaya doğrudan
+  // gelinerek) ileri sıçranınca, o konum HEMEN "gerçek izleme ilerlemesi"
+  // sayılmasın. Kullanıcı sıçradığı yerden kesintisiz GRACE_SECONDS kadar
+  // gerçekten izlerse, o zaman normal ilerleme kaydına geri dönülür. Aksi
+  // halde (hemen çıkarsa) eski kayıtlı ilerlemesi korunur.
+  const GRACE_SECONDS = 20;
+  const externalSeekGraceRef = useRef(false);
+  const graceWatchedRef = useRef(0);
+  const lastGraceTimeRef = useRef(0);
+
   const nextEpisode = getNextEpisode(episode.season, episode.episode);
 
   // ── Dışa açılan kontrol (yorumlardaki zaman damgası tıklamaları için) ───────
@@ -202,6 +213,9 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
     seekTo: (seconds: number) => {
       const player = playerRef.current;
       if (player && !player.isDisposed()) {
+        externalSeekGraceRef.current = true;
+        graceWatchedRef.current = 0;
+        lastGraceTimeRef.current = seconds;
         player.currentTime(Math.max(0, seconds));
         player.play().catch(() => {});
       }
@@ -216,6 +230,12 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
   const handleSaveProgress = useCallback((forceCompleted?: boolean) => {
     const player = playerRef.current;
     if (!player || player.isDisposed() || !user) return;
+    // Göz atma modundayken (bir zaman damgasına daha yeni sıçrandıysa) henüz
+    // yeterince organik izleme birikmedi — bu anlık pozisyonu "gerçek ilerleme"
+    // diye kaydetmeyelim (aksi halde 15sn'lik otomatik kayıt ya da sekmeyi
+    // kapatma, sadece göz attığınız noktayı kalıcı ilerleme yapardı).
+    // forceCompleted=true (video gerçekten bittiğinde) bu korumayı by-pass eder.
+    if (externalSeekGraceRef.current && !forceCompleted) return;
     const currentTime = player.currentTime() || 0;
     const duration = player.duration() || 0;
     if (currentTime > 5 && duration > 0) {
@@ -430,6 +450,13 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
     player.on('loadedmetadata', () => {
       setPlayerReady(true);
       if (startTimeOverride != null || startTime > 10) player.currentTime(startTime);
+      if (startTimeOverride != null) {
+        // Sayfaya doğrudan bir zaman damgası linkiyle (?t=773) gelindi —
+        // bu da bir "sıçrama", organik izleme değil. Aynı göz atma korumasını uygula.
+        externalSeekGraceRef.current = true;
+        graceWatchedRef.current = 0;
+        lastGraceTimeRef.current = startTimeOverride;
+      }
       player.play().catch((err: any) => console.warn('Autoplay blocked:', err));
       // startTimeOverride (varsa) artık uygulandı — WatchPage'e haber veriyoruz
       // ki ?t= URL parametresini ancak ŞİMDİ, güvenle temizleyebilsin.
@@ -489,6 +516,23 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       const currentTime = player.currentTime() || 0;
       const duration = player.duration() || 0;
 
+      // Göz atma modundaysak: sadece kesintisiz/organik ilerlemeyi say (ör.
+      // 0.25sn'lik normal timeupdate artışları). Yeni bir sıçrama ya da
+      // duraklatma sayılmasın; delta 0'dan küçük ya da anormal büyükse
+      // (ör. tekrar bir yere atlandıysa) sayaç sıfırlanmasın ama artmasın da.
+      if (externalSeekGraceRef.current) {
+        const delta = currentTime - lastGraceTimeRef.current;
+        if (delta > 0 && delta < 1.5) {
+          graceWatchedRef.current += delta;
+        }
+        lastGraceTimeRef.current = currentTime;
+        if (graceWatchedRef.current >= GRACE_SECONDS) {
+          // Kullanıcı sıçradığı yerden gerçekten yeterince izledi —
+          // artık bu, gerçek ilerleme sayılır.
+          externalSeekGraceRef.current = false;
+        }
+      }
+
       // Intro skip button
       if (currentTime >= INTRO_START && currentTime < INTRO_END && !skippedIntroRef.current) {
         setShowSkipIntro(true);
@@ -514,7 +558,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       }
     });
 
-    player.on('ended', () => { handleSaveProgress(); if (nextEpisode) goToNextEpisode(); });
+    player.on('ended', () => { handleSaveProgress(true); if (nextEpisode) goToNextEpisode(); });
 
     player.on('error', () => {
       const err = player.error();

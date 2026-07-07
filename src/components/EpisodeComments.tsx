@@ -8,6 +8,9 @@ import { formatSecondsAsTag, renderTextWithTimestamps } from '../lib/timestampTa
 // ── ATLA renkleri (form panel arkaplanı için) ──
 const W_DEEP = 'var(--water-deep)';      // #0d1f3c — Baş Köy su tonu
 
+// Yıldız üzerine gelince/seçilince gösterilen kısa geri bildirim metinleri
+const RATING_LABELS = ['Zayıf', 'Vasat', 'İdare Eder', 'İyi', 'Efsanevi'];
+
 interface EpisodeCommentsProps {
   episodeId: string;
   // Yorum içindeki "@12:53" gibi bir zaman damgasına tıklanınca çağrılır —
@@ -89,14 +92,19 @@ export default function EpisodeComments({ episodeId, onSeek, getCurrentTime }: E
 
       {/* ── Başlık ── */}
       <div className="flex items-center justify-between mb-8">
-        <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-white">
-          Bölüm Yorumları
-        </h2>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(74,158,202,0.12)', border: '1px solid rgba(74,158,202,0.25)' }}>
+            <MessageSquare size={16} className="element-water" />
+          </div>
+          <div>
+            <h2 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-white leading-none">
+              Bölüm Yorumları
+            </h2>
+          </div>
+        </div>
         {comments.length > 0 && (
           <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1">
-            <MessageSquare size={12} className="element-water" />
-                <span className="text-xs font-semibold text-white/60">{comments.length}</span>
-
+            <span className="text-xs font-semibold text-white/60">{comments.length} not</span>
           </div>
         )}
       </div>
@@ -109,65 +117,80 @@ export default function EpisodeComments({ episodeId, onSeek, getCurrentTime }: E
 
 
         {user ? (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div className="flex items-center gap-3">
               {user.photoURL && user.photoURL.startsWith('/profilePics/') ? (
                 <img src={user.photoURL} alt="Profil"
-                  className="w-9 h-9 rounded-xl object-cover border border-white/10 shrink-0" />
+                  className="w-11 h-11 rounded-xl object-cover border border-white/10 shrink-0" />
               ) : (
-                <div className="w-9 h-9 rounded-xl bg-white/5 text-white flex items-center justify-center font-bold border border-white/10 shrink-0 text-sm">
+                <div className="w-11 h-11 rounded-xl bg-white/5 text-white flex items-center justify-center font-bold border border-white/10 shrink-0 text-sm">
                   {user.email?.[0].toUpperCase()}
                 </div>
               )}
               <div>
-                <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-1.5">Puanınız</p>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button key={star} type="button"
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="focus:outline-none transition-transform hover:scale-110">
-                      <Star size={18}
-                        className={`transition-colors ${
-                          (hoverRating || rating) >= star
-                            ? 'fill-amber text-amber'
-                            : 'fill-transparent text-white/20'
-                        }`}
-                      />
-                    </button>
-                  ))}
+                <p className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-1.5">
+                  Puanınız <span className="normal-case font-normal text-white/25">(isteğe bağlı)</span>
+                </p>
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} type="button"
+                        onClick={() => setRating(rating === star ? 0 : star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className="focus:outline-none transition-transform hover:scale-125">
+                        <Star size={19}
+                          className={`transition-colors ${
+                            (hoverRating || rating) >= star
+                              ? 'fill-amber text-amber'
+                              : 'fill-transparent text-white/20'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {(hoverRating || rating) > 0 && (
+                    <span className="text-xs font-semibold text-amber/80 font-serif italic">
+                      {RATING_LABELS[(hoverRating || rating) - 1]}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="relative">
+            <div>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="Bu bölüm hakkında ne düşünüyorsunuz?"
-                className="w-full border border-white/[0.08] text-white rounded-xl p-4 pb-14 min-h-[110px] focus:outline-none focus:border-[var(--border-glow)] focus:ring-1 focus:ring-[var(--water-light)] transition-colors resize-none text-sm placeholder-white/20"
+                maxLength={800}
+                className="w-full border border-white/[0.08] text-white rounded-xl p-4 min-h-[100px] focus:outline-none focus:border-[var(--border-glow)] focus:ring-1 focus:ring-[var(--water-light)] transition-colors resize-none text-sm placeholder-white/20"
                 required
               />
-              {getCurrentTime && (
-                <button
-                  type="button"
-                  onClick={insertCurrentTimestamp}
-                  className="absolute bottom-3 left-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all active:scale-95"
-                  style={{ background: 'rgba(74,158,202,0.1)', color: 'var(--water-light)', border: '1px solid rgba(74,158,202,0.3)' }}
-                  title="Videonun şu anki dakikasını yoruma ekle"
-                >
-                  <Clock size={13} /> Şu Anı Ekle
-                </button>
-              )}
-              <button
-                type="submit"
-                disabled={isSubmitting || !text.trim() || rating === 0}
-                className="absolute bottom-3 right-3 element-fire-bg hover:element-fire-bg/80 disabled:opacity-30 disabled:grayscale text-white py-2 px-4 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg active:scale-95">
+              <div className="flex items-center justify-between gap-3 mt-3">
+                {getCurrentTime ? (
+                  <button
+                    type="button"
+                    onClick={insertCurrentTimestamp}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all active:scale-95 shrink-0"
+                    style={{ background: 'rgba(74,158,202,0.1)', color: 'var(--water-light)', border: '1px solid rgba(74,158,202,0.3)' }}
+                    title="Videonun şu anki dakikasını yoruma ekle"
+                  >
+                    <Clock size={13} /> <span className="hidden sm:inline">Şu Anı Ekle</span>
+                  </button>
+                ) : <span />}
 
-                {rating === 0 ? 'Puan Seçin' : isSubmitting ? 'Gönderiliyor...' : 'Gönder'}
-                <Send size={14} />
-              </button>
+                <div className="flex items-center gap-3">
+                  <span className="text-[11px] text-white/20 tabular-nums hidden sm:inline">{text.length}/800</span>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !text.trim()}
+                    className="element-fire-bg hover:element-fire-bg/80 disabled:opacity-30 disabled:grayscale text-white py-2.5 px-5 rounded-lg font-bold text-sm flex items-center gap-2 transition-all shadow-lg active:scale-95">
+                    {isSubmitting ? 'Gönderiliyor...' : 'Gönder'}
+                    <Send size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
         ) : (
@@ -209,19 +232,33 @@ export default function EpisodeComments({ episodeId, onSeek, getCurrentTime }: E
           comments.map((comment) => (
             <div
               key={comment.id}
-              className="group relative bg-[#111] border border-white/10 hover:border-white/20 rounded-3xl p-5 sm:p-6 transition-all"
+              className="group relative rounded-3xl p-5 sm:p-6 transition-all border"
+              style={{
+                background: 'linear-gradient(155deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015))',
+                borderColor: 'rgba(255,255,255,0.08)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-glow)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
             >
-              <div className="flex gap-4 items-start">
+              {/* köşedeki ince alıntı işareti — parşömen/tapınak hissi */}
+              <span
+                className="absolute top-4 right-5 font-serif text-4xl leading-none select-none pointer-events-none"
+                style={{ color: 'rgba(232,213,163,0.06)' }}
+              >
+                "
+              </span>
+
+              <div className="flex gap-4 items-start relative">
                 {/* Avatar */}
                 <Link to={`/profile/${comment.userName}`} className="shrink-0 mt-0.5">
                   {comment.userPhoto && comment.userPhoto.startsWith('/profilePics/') ? (
                     <img
                       src={comment.userPhoto}
                       alt={comment.userName || 'Kullanıcı'}
-                      className="w-10 h-10 rounded-xl object-cover border border-white/[0.08] hover:border-white/20 transition-colors"
+                      className="w-10 h-10 rounded-xl object-cover border border-white/[0.08] hover:border-[var(--border-glow)] transition-colors"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/40 border border-white/[0.06] hover:border-white/20 transition-colors font-bold uppercase text-sm">
+                    <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-white/40 border border-white/[0.06] hover:border-[var(--border-glow)] transition-colors font-bold uppercase text-sm">
                       {comment.userName ? comment.userName[0] : '?'}
                     </div>
                   )}
@@ -241,34 +278,36 @@ export default function EpisodeComments({ episodeId, onSeek, getCurrentTime }: E
                       <span className="text-white/25 text-xs">{formatDate(comment.createdAt)}</span>
                     </div>
 
-                    {/* Yıldızlar */}
-                    <div className="flex items-center gap-0.5">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          disabled={editingId !== comment.id}
-                          onClick={() => setEditRating(star)}
-                          onMouseEnter={() => editingId === comment.id && setHoverEditRating(star)}
-                          onMouseLeave={() => editingId === comment.id && setHoverEditRating(0)}
-                          className={
-                            editingId === comment.id
-                              ? 'cursor-pointer hover:scale-125 transition-transform'
-                              : 'cursor-default'
-                          }
-                        >
-                          <Star
-                            size={15}
-                            className={`transition-colors ${
-                              (editingId === comment.id
-                                ? (hoverEditRating || editRating)
-                                : Number(comment.rating) || 0) >= star
-                                ? 'fill-amber text-amber'
-                                : 'fill-transparent text-white/10'
-                            }`}
-                          />
-                        </button>
-                      ))}
-                    </div>
+                    {/* Yıldızlar — düzenlenirken her zaman, aksi halde sadece puan verilmişse */}
+                    {(editingId === comment.id || Number(comment.rating) > 0) && (
+                      <div className="flex items-center gap-0.5 shrink-0 rounded-full px-2 py-1" style={{ background: editingId === comment.id ? 'transparent' : 'rgba(196,129,58,0.08)' }}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            disabled={editingId !== comment.id}
+                            onClick={() => setEditRating(star)}
+                            onMouseEnter={() => editingId === comment.id && setHoverEditRating(star)}
+                            onMouseLeave={() => editingId === comment.id && setHoverEditRating(0)}
+                            className={
+                              editingId === comment.id
+                                ? 'cursor-pointer hover:scale-125 transition-transform'
+                                : 'cursor-default'
+                            }
+                          >
+                            <Star
+                              size={13}
+                              className={`transition-colors ${
+                                (editingId === comment.id
+                                  ? (hoverEditRating || editRating)
+                                  : Number(comment.rating) || 0) >= star
+                                  ? 'fill-amber text-amber'
+                                  : 'fill-transparent text-white/10'
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {editingId === comment.id ? (

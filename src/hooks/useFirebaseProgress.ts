@@ -5,6 +5,9 @@ import {
   getDoc,
   setDoc,
   onSnapshot,
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useStore } from '../store/useStore';
@@ -49,6 +52,8 @@ async function migrateIfNeeded(uid: string): Promise<void> {
 export function useFirebaseProgress() {
   const { user, setSubtitleLanguage } = useStore();
   const [allProgress, setAllProgress] = useState<Record<string, WatchProgress>>({});
+  const allProgressRef = useRef<Record<string, WatchProgress>>({});
+  useEffect(() => { allProgressRef.current = allProgress; }, [allProgress]);
   const [loading, setLoading] = useState(true);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -79,7 +84,15 @@ export function useFirebaseProgress() {
         (snap) => {
           const data: Record<string, WatchProgress> = {};
           snap.forEach((d) => {
-            data[d.id] = d.data() as WatchProgress;
+            const raw = d.data();
+            // lastWatched artık sunucuda serverTimestamp() ile yazılıyor (cihaz
+            // saatine değil, Firebase'in kendi saatine göre) — bunu tutarlı bir
+            // ISO string'e çeviriyoruz ki getLastWatched()'daki sıralama telefon/
+            // bilgisayar arasında saat farkından etkilenmesin.
+            const lastWatched = raw.lastWatched instanceof Timestamp
+              ? raw.lastWatched.toDate().toISOString()
+              : (raw.lastWatched as string) ?? new Date(0).toISOString();
+            data[d.id] = { ...(raw as WatchProgress), lastWatched };
           });
 
           setAllProgress(data);
@@ -118,6 +131,14 @@ export function useFirebaseProgress() {
   ) => {
     if (!user) return;
 
+    // Bölüm zaten "izlendi" olarak işaretlenmişse dondur: rewatch sırasında
+    // ileri/geri sarmak ya da videoyu tekrar sonuna kadar izlemek artık kaydı
+    // hiç değiştirmesin. Kullanıcı 2. izleyişi için ilerlemeyi sıfırlamak
+    // isterse bunu zaten ProfilePage'den manuel yapabiliyor — burada elle
+    // sıfırlanana kadar tamamlanmış bölümün kaydına dokunmuyoruz.
+    const existingProgress = allProgressRef.current[episodeId];
+    if (existingProgress?.completed) return;
+
     const percentage = duration > 0 ? (currentTime / duration) * 100 : 0;
     const completed = forceCompleted || percentage >= 90;
 
@@ -132,23 +153,49 @@ export function useFirebaseProgress() {
       completed,
     };
 
-    // UI'ı anında güncelle
-    setAllProgress((prev) => ({ ...prev, [episodeId]: progressData }));
+    // UI'ı anında güncelle — ama ASLA geriye doğru: kullanıcı bir zaman damgasına
+    // tıklayıp geri sardığında ya da bölümü baştan izlerken, "kaldığı yer" rozeti/
+    // ilerleme çubuğu/tamamlandı işareti bir anlığına bile geriye gidip görünmesin.
+    // Gerçek en yüksek ilerleme zaten Firestore'da güvende (aşağıdaki debounce'lı
+    // yazımda da aynı kural var); burada da aynı kuralı yerelde uyguluyoruz.
+    setAllProgress((prev) => {
+      const existing = prev[episodeId];
+      if (existing && existing.percentage >= percentage && existing.completed) {
+        // Zaten daha ileri bir noktaya ulaşılmış ve tamamlanmış — geri sarma
+        // bunu bozmasın, mevcut (daha yüksek) kaydı koru.
+        return prev;
+      }
+      if (existing && existing.percentage >= percentage) {
+        // Tamamlanmamış ama daha yüksek bir ilerleme var — geri sarmayla
+        // düşürülmesin, sadece "son izlenme" zamanını güncelleyelim.
+        return { ...prev, [episodeId]: { ...existing, lastWatched: progressData.lastWatched } };
+      }
+      return { ...prev, [episodeId]: progressData };
+    });
 
     // Firebase'e yazmayı debounce et — seek patlamasını önler
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         const episodeRef = doc(db, 'users', user.uid, 'progress', episodeId);
-        const existingSnap = await getDoc(episodeRef);
 
-        // Firestore'daki veriyi karşılaştır — stale allProgress yerine gerçek server data
-        if (existingSnap.exists()) {
-          const existing = existingSnap.data() as WatchProgress;
-          if (existing.percentage >= percentage) return;
-        }
-
-        await setDoc(episodeRef, progressData);
+        // runTransaction: "oku, karşılaştır, yaz" adımlarını atomik yapar.
+        // Önceki (getDoc + setDoc) yönteminde, telefon ve bilgisayar aynı
+        // bölümü neredeyse aynı anda kaydederse, ikisi de aynı "eski" veriyi
+        // okuyup ikisi de yazabilir — sonuncusu kazanır ve diğer cihazın daha
+        // ileri ilerlemesi kaybolabilirdi. Transaction bunu Firestore
+        // sunucusunda kilitleyerek engeller.
+        await runTransaction(db, async (transaction) => {
+          const snap = await transaction.get(episodeRef);
+          if (snap.exists()) {
+            const existing = snap.data() as WatchProgress;
+            if (existing.percentage >= percentage) return; // daha ileri bir kayıt var, dokunma
+          }
+          // lastWatched'ı cihazın kendi saati yerine Firebase sunucu saatiyle
+          // yazıyoruz — telefon/bilgisayar saat farkı "en son izlenen" sırasını
+          // (getLastWatched / devam et listesi) artık bozamaz.
+          transaction.set(episodeRef, { ...progressData, lastWatched: serverTimestamp() });
+        });
       } catch (err) {
         console.error('[Progress] Kayıt hatası:', err);
       }

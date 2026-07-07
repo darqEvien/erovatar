@@ -2,12 +2,22 @@ import { useState } from 'react';
 import { useComments } from '../hooks/useComments';
 import { useStore } from '../store/useStore';
 import { Link } from 'react-router-dom';
-import { Star, Trash2, Send, Edit3, X, Check, MessageSquare } from 'lucide-react';
+import { Star, Trash2, Send, Edit3, X, Check, MessageSquare, Clock } from 'lucide-react';
+import { formatSecondsAsTag, renderTextWithTimestamps } from '../lib/timestampTags';
 
 // ── ATLA renkleri (form panel arkaplanı için) ──
 const W_DEEP = 'var(--water-deep)';      // #0d1f3c — Baş Köy su tonu
 
-export default function EpisodeComments({ episodeId }: { episodeId: string }) {
+interface EpisodeCommentsProps {
+  episodeId: string;
+  // Yorum içindeki "@12:53" gibi bir zaman damgasına tıklanınca çağrılır —
+  // WatchPage bunu video oynatıcıyı o saniyeye sardırmak için kullanır.
+  onSeek?: (seconds: number) => void;
+  // "Şu anı ekle" butonu için oynatıcının o anki saniyesini okur.
+  getCurrentTime?: () => number;
+}
+
+export default function EpisodeComments({ episodeId, onSeek, getCurrentTime }: EpisodeCommentsProps) {
   const { comments, loading, error, addComment, deleteComment, updateComment } = useComments(episodeId);
   const { user } = useStore();
 
@@ -35,6 +45,19 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // ── "Şu Anı Ekle": video'nun o anki saniyesini "@mm:ss" olarak metne ekler ──
+  const insertCurrentTimestamp = () => {
+    if (!getCurrentTime) return;
+    const tag = formatSecondsAsTag(getCurrentTime());
+    setText((prev) => (prev.trim() ? `${prev.trim()} ${tag} ` : `${tag} `));
+  };
+
+  const insertCurrentTimestampInEdit = () => {
+    if (!getCurrentTime) return;
+    const tag = formatSecondsAsTag(getCurrentTime());
+    setEditText((prev) => (prev.trim() ? `${prev.trim()} ${tag} ` : `${tag} `));
   };
 
   const handleUpdate = async (commentId: string) => {
@@ -126,6 +149,17 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                 className="w-full border border-white/[0.08] text-white rounded-xl p-4 pb-14 min-h-[110px] focus:outline-none focus:border-[var(--border-glow)] focus:ring-1 focus:ring-[var(--water-light)] transition-colors resize-none text-sm placeholder-white/20"
                 required
               />
+              {getCurrentTime && (
+                <button
+                  type="button"
+                  onClick={insertCurrentTimestamp}
+                  className="absolute bottom-3 left-3 flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all active:scale-95"
+                  style={{ background: 'rgba(74,158,202,0.1)', color: 'var(--water-light)', border: '1px solid rgba(74,158,202,0.3)' }}
+                  title="Videonun şu anki dakikasını yoruma ekle"
+                >
+                  <Clock size={13} /> Şu Anı Ekle
+                </button>
+              )}
               <button
                 type="submit"
                 disabled={isSubmitting || !text.trim() || rating === 0}
@@ -245,24 +279,37 @@ export default function EpisodeComments({ episodeId }: { episodeId: string }) {
                         className="w-full border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-[var(--border-glow)] min-h-[80px] resize-none"
                         autoFocus
                       />
-                      <div className="flex justify-end gap-2 mt-2">
-                        <button
-                          onClick={() => setEditingId(null)}
-                          className="p-2 text-white/30 hover:text-white transition-colors"
-                        >
-                          <X size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleUpdate(comment.id)}
-                          className="p-2 element-fire-bg hover:element-fire-bg/80 text-white rounded-lg transition-colors"
-                        >
-                          <Check size={15} />
-                        </button>
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        {getCurrentTime && (
+                          <button
+                            type="button"
+                            onClick={insertCurrentTimestampInEdit}
+                            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg transition-all active:scale-95"
+                            style={{ background: 'rgba(74,158,202,0.1)', color: 'var(--water-light)', border: '1px solid rgba(74,158,202,0.3)' }}
+                            title="Videonun şu anki dakikasını yoruma ekle"
+                          >
+                            <Clock size={13} /> Şu Anı Ekle
+                          </button>
+                        )}
+                        <div className="flex gap-2 ml-auto">
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="p-2 text-white/30 hover:text-white transition-colors"
+                          >
+                            <X size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdate(comment.id)}
+                            className="p-2 element-fire-bg hover:element-fire-bg/80 text-white rounded-lg transition-colors"
+                          >
+                            <Check size={15} />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <p className="text-white/60 leading-relaxed text-sm whitespace-pre-wrap break-words">
-                      {comment.text}
+                      {renderTextWithTimestamps(comment.text, onSeek)}
                     </p>
                   )}
                 </div>

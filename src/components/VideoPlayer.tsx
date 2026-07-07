@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 import type Player from 'video.js/dist/types/player';
@@ -11,6 +11,17 @@ interface VideoPlayerProps {
   episode: Episode;
   mini?: boolean;
   onGoNext?: () => void;
+  // Yorumlardaki zaman damgası linklerinden (örn. profil sayfasından "@12:53"
+  // tıklanarak) gelindiğinde, kayıtlı izleme ilerlemesi yerine bu saniyeden
+  // başlatmak için kullanılır. Verilmezse normal kayıtlı ilerleme uygulanır.
+  startTimeOverride?: number;
+}
+
+// WatchPage gibi üst bileşenlerin (örn. yorumlardaki zaman damgalarına
+// tıklandığında) player'ı dışarıdan kontrol edebilmesi için dışa açılan arayüz.
+export interface VideoPlayerHandle {
+  seekTo: (seconds: number) => void;
+  getCurrentTime: () => number;
 }
 
 // Thumbnail URL: /s1/e1/thumbnails.jpg
@@ -166,7 +177,7 @@ function attachScrubThumbnailPreview(player: Player, rootEl: HTMLElement, cues: 
   };
 }
 
-export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPlayerProps) {
+const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer({ episode, mini = false, onGoNext, startTimeOverride }, ref) {
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -182,6 +193,21 @@ export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPl
   const skippedIntroRef = useRef(false);
 
   const nextEpisode = getNextEpisode(episode.season, episode.episode);
+
+  // ── Dışa açılan kontrol (yorumlardaki zaman damgası tıklamaları için) ───────
+  useImperativeHandle(ref, () => ({
+    seekTo: (seconds: number) => {
+      const player = playerRef.current;
+      if (player && !player.isDisposed()) {
+        player.currentTime(Math.max(0, seconds));
+        player.play().catch(() => {});
+      }
+    },
+    getCurrentTime: () => {
+      const player = playerRef.current;
+      return player && !player.isDisposed() ? (player.currentTime() || 0) : 0;
+    },
+  }), []);
 
   // ── Save progress ──────────────────────────────────────────────────────────
   const handleSaveProgress = useCallback((forceCompleted?: boolean) => {
@@ -250,7 +276,9 @@ export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPl
 
     const videoUrl = getVideoUrl(episode);
     const savedProgress = getProgress(episode.id);
-    const startTime = savedProgress && !savedProgress.completed ? savedProgress.currentTime : 0;
+    const startTime = startTimeOverride != null
+      ? startTimeOverride
+      : (savedProgress && !savedProgress.completed ? savedProgress.currentTime : 0);
     const cacheBusterUrl = `${videoUrl}${videoUrl.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
 const playerOptions = {
   autoplay: true,
@@ -398,7 +426,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
     // ── loadedmetadata ─────────────────────────────────────────────────────────
     player.on('loadedmetadata', () => {
       setPlayerReady(true);
-      if (startTime > 10) player.currentTime(startTime);
+      if (startTimeOverride != null || startTime > 10) player.currentTime(startTime);
       player.play().catch((err: any) => console.warn('Autoplay blocked:', err));
     });
 
@@ -626,4 +654,6 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       )}
     </div>
   );
-}
+});
+
+export default VideoPlayer;

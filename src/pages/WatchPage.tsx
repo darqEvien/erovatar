@@ -1,6 +1,6 @@
-import { useParams, Navigate, useNavigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { getEpisode, getSeasonByNumber, getNextEpisode, getPreviousEpisode } from '../data/episodes';
-import VideoPlayer from '../components/VideoPlayer';
+import VideoPlayer, { type VideoPlayerHandle } from '../components/VideoPlayer';
 import { useFirebaseProgress } from '../hooks/useFirebaseProgress';
 import { ArrowLeft, ArrowRight, ListVideo, Home, X, PlayCircle, CheckCircle, Monitor, MonitorOff, User } from 'lucide-react';
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -23,6 +23,8 @@ const ELEMENT_LABELS: Record<number, string> = {
 export default function WatchPage() {
   const { seasonNumber, episodeNumber } = useParams<{ seasonNumber: string; episodeNumber: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const videoPlayerRef = useRef<VideoPlayerHandle>(null);
 
   const season = parseInt(seasonNumber || '1', 10);
   const epNum = parseInt(episodeNumber || '1', 10);
@@ -97,6 +99,23 @@ export default function WatchPage() {
     setIsPlaylistOpen(false);
     setSelectedSeasonDrawer(season);
   }, [episode?.id, season]);
+
+  // ── Yorumlardaki zaman damgası linki (?t=773) ile açılış ────────────────────
+  // Profil sayfasındaki bir yorumun "@12:53" etiketine tıklanınca buraya
+  // /watch/{season}/{episode}?t=773 şeklinde geliniyor. VideoPlayer bu değeri
+  // ilk açılışta kullanıp o saniyeden başlıyor; sonra URL'i temizliyoruz ki
+  // geri/ileri gitmede ya da sayfa yenilemede tekrar oraya sıçramasın.
+  const tParam = searchParams.get('t');
+  const startTimeOverride = tParam !== null && !Number.isNaN(Number(tParam)) ? Number(tParam) : undefined;
+
+  useEffect(() => {
+    if (searchParams.has('t')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('t');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episode?.id]);
 
   if (!episode) return <Navigate to="/" />;
 
@@ -428,7 +447,13 @@ export default function WatchPage() {
                   transition: `transform ${overlayOpacity ? FADE_OUT_MS : FADE_IN_MS}ms cubic-bezier(0.4, 0, 0.2, 1), filter ${overlayOpacity ? FADE_OUT_MS : FADE_IN_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
                 }}
               >
-                <VideoPlayer key={episode.id} episode={episode} onGoNext={smoothNavigateToNext} />
+                <VideoPlayer
+                  ref={videoPlayerRef}
+                  key={episode.id}
+                  episode={episode}
+                  onGoNext={smoothNavigateToNext}
+                  startTimeOverride={startTimeOverride}
+                />
               </div>
             </div>
           </div>
@@ -522,7 +547,11 @@ export default function WatchPage() {
             </div>
 
             {/* Comments */}
-            <EpisodeComments episodeId={episode.id} />
+            <EpisodeComments
+              episodeId={episode.id}
+              onSeek={(seconds) => videoPlayerRef.current?.seekTo(seconds)}
+              getCurrentTime={() => videoPlayerRef.current?.getCurrentTime() ?? 0}
+            />
           </div>
         </div>
 

@@ -9,6 +9,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Check, User, MessageSquare, Tv, ChevronRight, Settings, Star, Trash2 } from 'lucide-react';
 import { getEpisode } from '../data/episodes';
 import ImageWithOverlay from '../components/ImageWithOverlay';
+import { renderTextWithTimestamps } from '../lib/timestampTags';
 
 // ─── Tipler ───────────────────────────────────────────────────────────────────
 interface Comment {
@@ -243,6 +244,13 @@ export default function ProfilePage() {
     } catch { alert("Güncelleme sırasında hata oluştu."); }
   };
 
+  // Yorumdaki bir "@12:53" zaman damgasına tıklanınca ilgili bölümün watch
+  // sayfasına, o saniyeden başlayacak şekilde yönlendirir (?t=773).
+  const handleTimestampSeek = (seconds: number, parsed: { season: number; episode: number } | null) => {
+    if (!parsed) return;
+    navigate(`/watch/${parsed.season}/${parsed.episode}?t=${Math.floor(seconds)}`);
+  };
+
   const displayName = viewingOwnProfile ? (user?.displayName || 'Kullanıcı') : (publicProfile?.username || paramUsername || '...');
   const displayPhoto = viewingOwnProfile ? user?.photoURL : publicProfile?.photoURL;
   const hasValidPhoto = !!displayPhoto && displayPhoto.startsWith('/profilePics/');
@@ -468,7 +476,9 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--parchment)', opacity: 0.85 }}>{c.text}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--parchment)', opacity: 0.85 }}>
+                          {renderTextWithTimestamps(c.text, (seconds) => handleTimestampSeek(seconds, parsed))}
+                        </p>
                         <p className="text-xs mt-3" style={{ color: 'var(--stone)', opacity: 0.6 }}>{formatDate(c.createdAt)}</p>
                         <div className="flex items-center gap-0.5 mt-2">
                           {[1, 2, 3, 4, 5].map((star) => (

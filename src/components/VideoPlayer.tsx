@@ -15,6 +15,9 @@ interface VideoPlayerProps {
   // tıklanarak) gelindiğinde, kayıtlı izleme ilerlemesi yerine bu saniyeden
   // başlatmak için kullanılır. Verilmezse normal kayıtlı ilerleme uygulanır.
   startTimeOverride?: number;
+  // startTimeOverride gerçekten oynatıcıya uygulandıktan sonra çağrılır.
+  // WatchPage bunu, ?t= URL parametresini güvenli bir zamanda temizlemek için kullanır.
+  onReady?: () => void;
 }
 
 // WatchPage gibi üst bileşenlerin (örn. yorumlardaki zaman damgalarına
@@ -177,7 +180,7 @@ function attachScrubThumbnailPreview(player: Player, rootEl: HTMLElement, cues: 
   };
 }
 
-const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer({ episode, mini = false, onGoNext, startTimeOverride }, ref) {
+const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer({ episode, mini = false, onGoNext, startTimeOverride, onReady }, ref) {
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -428,6 +431,9 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
       setPlayerReady(true);
       if (startTimeOverride != null || startTime > 10) player.currentTime(startTime);
       player.play().catch((err: any) => console.warn('Autoplay blocked:', err));
+      // startTimeOverride (varsa) artık uygulandı — WatchPage'e haber veriyoruz
+      // ki ?t= URL parametresini ancak ŞİMDİ, güvenle temizleyebilsin.
+      onReady?.();
     });
 
     // ── Intro skip (90s window) ────────────────────────────────────────────────

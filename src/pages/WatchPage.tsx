@@ -103,19 +103,26 @@ export default function WatchPage() {
   // ── Yorumlardaki zaman damgası linki (?t=773) ile açılış ────────────────────
   // Profil sayfasındaki bir yorumun "@12:53" etiketine tıklanınca buraya
   // /watch/{season}/{episode}?t=773 şeklinde geliniyor. VideoPlayer bu değeri
-  // ilk açılışta kullanıp o saniyeden başlıyor; sonra URL'i temizliyoruz ki
-  // geri/ileri gitmede ya da sayfa yenilemede tekrar oraya sıçramasın.
+  // ilk açılışta kullanıp o saniyeden başlıyor.
+  //
+  // ÖNEMLİ: URL'i burada, mount anında hemen temizlemiyoruz. VideoPlayer'ın
+  // asıl oynatıcı kurulumu Firestore'dan ilerleme verisi yüklenene kadar (loading)
+  // bekliyor; o sırada URL'i erken temizlersek, oynatıcı kurulduğunda
+  // startTimeOverride artık undefined olmuş oluyor ve video kayıtlı ilerlemeden
+  // devam ediyor (zaman damgası hiç uygulanmamış gibi). Bu yüzden temizlemeyi,
+  // VideoPlayer'ın "onReady" callback'iyle override'ı GERÇEKTEN uyguladığını
+  // bildirdiği ana erteliyoruz.
   const tParam = searchParams.get('t');
   const startTimeOverride = tParam !== null && !Number.isNaN(Number(tParam)) ? Number(tParam) : undefined;
 
-  useEffect(() => {
-    if (searchParams.has('t')) {
-      const next = new URLSearchParams(searchParams);
+  const handlePlayerReady = useCallback(() => {
+    setSearchParams((prev) => {
+      if (!prev.has('t')) return prev;
+      const next = new URLSearchParams(prev);
       next.delete('t');
-      setSearchParams(next, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [episode?.id]);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   if (!episode) return <Navigate to="/" />;
 
@@ -453,6 +460,7 @@ export default function WatchPage() {
                   episode={episode}
                   onGoNext={smoothNavigateToNext}
                   startTimeOverride={startTimeOverride}
+                  onReady={handlePlayerReady}
                 />
               </div>
             </div>

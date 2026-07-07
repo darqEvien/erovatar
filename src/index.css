@@ -43,6 +43,10 @@
   --element-water: #4a9eca;
   --element-earth: #7a9c4a;
   --element-fire:  #c45a3a;
+
+  /* Player'ın vurgu rengi — WatchPage bölümün elementine göre override eder,
+     tanımlanmadığı yerlerde (mini player, diğer sayfalar) su rengine düşer. */
+  --player-accent: var(--water-light);
 }
 
 @layer base {
@@ -90,42 +94,389 @@
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { opacity: 0.8; }
 
-/* ====== VIDEO.JS OVERRIDES (Avatar blue) ====== */
+/* ══════════════════════════════════════════════════════════════════════════
+   VIDEO.JS — ÖZEL AVATAR TEMASI
+   Stock video.js iskeletini (düz kutu kontrol çubuğu, beyaz slider'lar, sistem
+   fontlu menüler) sitenin geri kalanıyla aynı dile çeviriyoruz: yüzen cam panel,
+   su/kehribar aksanları, Cinzel başlıklar. `--player-accent` bölümün elementine
+   göre WatchPage tarafından ayarlanır (su/toprak/ateş); tanımlı değilse su rengine
+   düşer, böylece player her yerde (mini player dahil) markaya uygun kalır.
+   ══════════════════════════════════════════════════════════════════════════ */
+
 .video-js {
   width: 100% !important;
   height: 100% !important;
   background-color: #000 !important;
+  font-family: 'Inter', sans-serif;
 }
 
+/* ── Büyük oynat düğmesi ─────────────────────────────────────────────────── */
 .video-js .vjs-big-play-button {
-  background-color: var(--water-light) !important;
+  background: var(--player-accent) !important;
   border: none !important;
   border-radius: 50% !important;
-  width: 80px !important;
-  height: 80px !important;
-  line-height: 80px !important;
-  font-size: 36px !important;
+  width: 76px !important;
+  height: 76px !important;
+  line-height: 76px !important;
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  transition: all 0.3s ease !important;
-  box-shadow: 0 0 30px rgba(74,158,202,0.5) !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease, background 0.3s ease !important;
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--player-accent) 45%, transparent) !important;
 }
-
+.video-js .vjs-big-play-button .vjs-svg-icon {
+  width: 30px;
+  height: 30px;
+  fill: var(--night);
+  transform: translateX(1px);
+}
 .video-js .vjs-big-play-button:hover {
-  background-color: var(--amber) !important;
-  transform: translate(-50%, -50%) scale(1.1) !important;
-  box-shadow: 0 0 40px rgba(196,129,58,0.5) !important;
+  background: var(--amber-bright) !important;
+  transform: translate(-50%, -50%) scale(1.08) !important;
+  box-shadow: 0 8px 40px rgba(224,156,76,0.55) !important;
 }
 
+/* ── Kontrol çubuğu: yüzen cam panel ─────────────────────────────────────── */
 .video-js .vjs-control-bar {
-  background: linear-gradient(transparent, rgba(7,13,26,0.95)) !important;
-  height: 48px !important;
+  left: 10px !important;
+  right: 10px !important;
+  bottom: 10px !important;
+  width: auto !important;
+  height: 52px !important;
+  border-radius: 14px !important;
+  padding: 0 8px !important;
+  background: rgba(7,13,26,0.55) !important;
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.35) !important;
+  transition: opacity 0.35s ease, transform 0.35s ease !important;
+}
+.video-js.vjs-has-started.vjs-user-inactive.vjs-playing .vjs-control-bar {
+  transform: translateY(6px);
+}
+/* Mini oynatıcıda panel hissi gereksiz — daha sade, kenara yaslı */
+.video-js.vjs-layout-tiny .vjs-control-bar,
+.video-js.vjs-layout-x-small .vjs-control-bar {
+  left: 4px !important; right: 4px !important; bottom: 4px !important;
+  height: 40px !important; border-radius: 10px !important; padding: 0 4px !important;
 }
 
-.video-js .vjs-play-progress,
+/* ── Düğmeler (oynat/durdur, tam ekran, PiP, altyazı vb.) ────────────────── */
+.video-js .vjs-control {
+  color: var(--stone);
+  transition: color 0.2s ease;
+}
+.video-js .vjs-control:hover,
+.video-js .vjs-control:focus {
+  color: var(--parchment);
+}
+.video-js .vjs-control:hover:before,
+.video-js .vjs-control:focus:before,
+.video-js .vjs-control:focus {
+  text-shadow: none !important; /* stock'un çirkin beyaz text-shadow'unu kaldır */
+}
+.video-js .vjs-svg-icon {
+  width: 1.5em;
+  height: 1.5em;
+}
+/* PiP "enter" ikonu kare (48x48) ama "exit" ikonu değil (22x18). Sabit
+   width+height eşitliği exit ikonunu esnetip bozuyordu (test edildi);
+   sadece PiP aktifken (exit ikonu gösterilirken) gerçek orana geçiyoruz. */
+.video-js.vjs-picture-in-picture .vjs-picture-in-picture-control .vjs-svg-icon {
+  height: auto;
+  aspect-ratio: 22 / 18;
+}
+.video-js .vjs-svg-icon:hover,
+.video-js .vjs-control:focus .vjs-svg-icon {
+  filter: none !important; /* stock'un beyaz drop-shadow'unu kaldır, kendi hover rengimiz yeter */
+}
+.video-js .vjs-play-control .vjs-svg-icon {
+  width: 1.7em;
+  height: 1.7em;
+}
+
+/* ── Küçük ekran: play/pause düğmesi gereksiz ─────────────────────────────
+   Videoya dokunmak zaten oynat/durdur'u tetikliyor (video.js'in yerleşik
+   davranışı); dar control bar'da ayrıca bir play/pause düğmesi tutmak yer
+   kaybı ve tekrar oluyor. */
+.video-js.vjs-layout-small .vjs-play-control,
+.video-js.vjs-layout-x-small .vjs-play-control,
+.video-js.vjs-layout-tiny .vjs-play-control {
+  display: none !important;
+}
+.video-js .vjs-progress-control .vjs-progress-holder {
+  margin: 0 12px;
+  height: 4px !important;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.14);
+  overflow: visible;
+  transition: height 0.15s ease;
+}
+.video-js .vjs-progress-control:hover .vjs-progress-holder {
+  height: 6px !important;
+  font-size: 1em !important; /* stock'un em-tabanlı büyütmesini iptal ediyoruz, kendi height'ımızı yönetiyoruz */
+}
+.video-js .vjs-load-progress,
+.video-js .vjs-load-progress div {
+  border-radius: 999px;
+  background: rgba(255,255,255,0.22) !important;
+}
+.video-js .vjs-play-progress {
+  background: var(--player-accent) !important;
+  border-radius: 999px;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--player-accent) 70%, transparent);
+}
+/* Scrub topu: ilerlemenin ucundaki nokta */
+.video-js .vjs-play-progress .vjs-svg-icon {
+  width: 12px !important;
+  height: 12px !important;
+  top: 50% !important;
+  right: -6px !important;
+  transform: translateY(-50%);
+  fill: var(--parchment) !important;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.5));
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.video-js .vjs-progress-control:hover .vjs-play-progress .vjs-svg-icon {
+  opacity: 1;
+}
+
+/* ── Zaman etiketi (hover'da beliren tooltip) ─────────────────────────────── */
+.video-js .vjs-time-tooltip {
+  background: var(--water-deep) !important;
+  color: var(--parchment) !important;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px !important;
+  font-family: 'Cinzel', serif !important;
+  font-size: 11px !important;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 4px 8px !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+}
+.video-js .vjs-mouse-display .vjs-time-tooltip {
+  background: var(--water-deep) !important;
+}
+.video-js .vjs-mouse-display {
+  background-color: var(--player-accent) !important;
+  width: 2px !important;
+  opacity: 0.6;
+}
+
+/* ── Zaman metinleri ───────────────────────────────────────────────────── */
+.video-js .vjs-time-control {
+  font-family: 'Inter', sans-serif;
+  font-size: 12px !important;
+  font-weight: 500;
+  line-height: 52px !important;
+  color: var(--stone);
+}
+.video-js .vjs-current-time-display,
+.video-js .vjs-duration-display {
+  color: var(--parchment);
+}
+
+/* ── Ses kontrolü ─────────────────────────────────────────────────────── */
+.video-js .vjs-volume-panel {
+  display: flex !important;
+  align-items: center !important;
+}
+.video-js .vjs-volume-control.vjs-volume-horizontal {
+  width: 6em !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  margin: 0 6px !important;
+}
+.video-js .vjs-volume-bar.vjs-slider-horizontal {
+  width: 100% !important;
+  height: 4px !important;
+  margin: 0 !important;
+  border-radius: 999px !important;
+  overflow: visible;
+}
+.video-js .vjs-volume-bar {
+  background: rgba(255,255,255,0.14) !important;
+  border-radius: 999px !important;
+}
 .video-js .vjs-volume-level {
-  background-color: var(--water-light) !important;
+  background: var(--player-accent) !important;
+  border-radius: 999px !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  height: 100% !important;
+}
+.video-js .vjs-volume-level:before,
+.video-js .vjs-volume-level .vjs-svg-icon {
+  display: none !important; /* ses barındaki fazladan ikonu sadeleştiriyoruz */
+}
+.video-js .vjs-mute-control {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.video-js .vjs-volume-vertical {
+  background: var(--water-deep) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 10px !important;
+  backdrop-filter: blur(10px);
+  /* Stock'un "bottom: 8em" değeri stock'un düz/flush control bar'ı için
+     hesaplanmıştı. Bizim yüzen panelimiz (52px + 10px margin) farklı olduğu
+     için bu popup her zaman panelin hemen üstüne, sabit bir piksel değerle
+     ankorlanıyor — dar ekranda otomatik dikey moda düşse bile ekranın
+     üstünde asılı kalmıyor. */
+  bottom: 68px !important;
+}
+.video-js.vjs-layout-tiny .vjs-volume-vertical,
+.video-js.vjs-layout-x-small .vjs-volume-vertical {
+  bottom: 52px !important;
+}
+
+/* ── Oynatma hızı (1x) düğmesi: dikey ortalama ────────────────────────────── */
+.video-js .vjs-playback-rate {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.video-js .vjs-playback-rate .vjs-playback-rate-value {
+  position: static !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  line-height: 1 !important;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── Açılır menüler (altyazı, oynatma hızı, kalite) ───────────────────────── */
+/* NOT: dış .vjs-menu kapsayıcısı stock CSS'te height:0 — üzerine overflow:hidden
+   koyarsak popup içeriği (mutlak konumlanmış .vjs-menu-content) tamamen kırpılır.
+   Yuvarlatma/gölge sadece gerçek görünür kutu olan .vjs-menu-content'e uygulanır. */
+.video-js .vjs-menu-button-popup .vjs-menu .vjs-menu-content {
+  background: var(--water-deep) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+  padding: 6px !important;
+}
+.video-js .vjs-menu li {
+  font-family: 'Inter', sans-serif;
+  text-transform: none !important;
+  border-radius: 8px;
+  color: var(--stone);
+  font-size: 13px !important;
+  padding: 8px 10px !important;
+  margin: 1px 0 !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.video-js .vjs-menu li.vjs-menu-item:hover,
+.video-js .vjs-menu li.vjs-menu-item:focus {
+  background: rgba(74,158,202,0.12) !important;
+  color: var(--parchment) !important;
+}
+.video-js .vjs-menu li.vjs-selected,
+.video-js .vjs-menu li.vjs-selected:focus,
+.video-js .vjs-menu li.vjs-selected:hover {
+  background: var(--player-accent) !important;
+  color: var(--night) !important;
+  font-weight: 600;
+}
+.video-js .vjs-menu li.vjs-selected .vjs-svg-icon {
+  fill: var(--night) !important;
+}
+.video-js .vjs-menu li.vjs-menu-title {
+  font-family: 'Cinzel', serif;
+  color: var(--stone);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px !important;
+  opacity: 0.7;
+}
+
+/* ── Yükleniyor spinner'ı ─────────────────────────────────────────────────── */
+.video-js .vjs-loading-spinner {
+  border-color: color-mix(in srgb, var(--player-accent) 30%, transparent) !important;
+}
+.video-js .vjs-loading-spinner:before,
+.video-js .vjs-loading-spinner:after {
+  border-top-color: var(--player-accent) !important;
+}
+
+/* ── Odak halkası: kırmızı/varsayılan mavi yerine tema rengi ─────────────── */
+.video-js .vjs-slider:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--player-accent) 40%, transparent) !important;
+  text-shadow: none !important;
+}
+
+/* ── Altyazı/Caption Ayarları penceresi ───────────────────────────────────
+   Stock video.js bu modalın arkaplanını/metin rengini ayarlıyor (koyu +
+   beyaz) ama içindeki native <select> elemanlarına HİÇBİR arkaplan rengi
+   vermiyor — tarayıcı varsayılanı (beyaz) + miras alınan beyaz yazı = görünmez
+   metin. Modalın tamamını temaya çeviriyor ve select'lere açıkça koyu bir
+   arkaplan tanımlıyoruz. */
+.video-js .vjs-modal-dialog {
+  background: rgba(7,13,26,0.85) !important;
+  backdrop-filter: blur(6px);
+}
+.video-js .vjs-modal-dialog .vjs-modal-dialog-content {
+  color: var(--parchment);
+}
+.video-js .vjs-text-track-settings {
+  background: var(--water-mid) !important;
+  color: var(--parchment) !important;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  font-family: 'Inter', sans-serif;
+}
+.video-js .vjs-text-track-settings legend {
+  color: var(--parchment) !important;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 1.05em !important;
+  letter-spacing: 0.03em;
+}
+.video-js .vjs-text-track-settings .vjs-label {
+  color: var(--stone) !important;
+}
+.video-js .vjs-text-track-settings select {
+  background: var(--water-deep) !important;
+  color: var(--parchment) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 6px !important;
+  padding: 4px 8px !important;
+}
+.video-js .vjs-text-track-settings select option {
+  background: var(--water-deep);
+  color: var(--parchment);
+}
+.video-js .vjs-track-settings-controls button {
+  background: var(--water-deep) !important;
+  color: var(--parchment) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  transition: background 0.15s ease;
+}
+.video-js .vjs-track-settings-controls .vjs-default-button {
+  background: transparent !important;
+  border: 1px solid var(--border-soft) !important;
+}
+.video-js .vjs-track-settings-controls button:hover {
+  background: var(--player-accent) !important;
+  color: var(--night) !important;
+}
+.video-js .vjs-close-button .vjs-svg-icon,
+.video-js .vjs-close-button .vjs-icon-placeholder {
+  color: var(--stone);
+}
+.video-js .vjs-close-button:hover .vjs-svg-icon {
+  color: var(--parchment);
 }
 
 /* ====== ANIMATIONS ====== */
@@ -145,6 +496,20 @@
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease forwards;
+}
+
+/* ====== PLAYLIST: OTO GEÇİŞ PULSE ======
+   Oto geçiş (veya manuel geçiş) sonrası aktif olan bölüm satırı, sağdaki
+   listede sessizce state güncellemek yerine kısa bir "az önce buraya
+   geldim" parıltısıyla dikkat çekiyor. --pulse-color satırın kendi element
+   rengine (su/toprak/ateş) bağlı. */
+@keyframes playlistArrive {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color) 55%, transparent), 0 0 0px color-mix(in srgb, var(--pulse-color) 30%, transparent); background-color: color-mix(in srgb, var(--pulse-color) 22%, transparent); }
+  60%  { box-shadow: 0 0 0 8px color-mix(in srgb, var(--pulse-color) 0%, transparent), 0 0 22px color-mix(in srgb, var(--pulse-color) 35%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color) 0%, transparent), 0 0 12px color-mix(in srgb, var(--pulse-color) 18%, transparent); }
+}
+.playlist-just-arrived {
+  animation: playlistArrive 1.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ====== BRUSH BORDER (signature element) ====== */

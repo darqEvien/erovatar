@@ -38,6 +38,22 @@ export default function WatchPage() {
   const [isPlaylistOpen, setIsPlaylistOpen] = useState(false);
   const [selectedSeasonDrawer, setSelectedSeasonDrawer] = useState(season);
 
+  // Oto-geçiş / bölüm değişince: playlist'te aktif satırı yumuşakça görünüre kaydır
+  // ve kısa bir "az önce buraya geçti" pulse'u tetikle — sağdaki liste artık
+  // sessizce state güncellemek yerine görünür bir animasyonla tepki veriyor.
+  const [justArrivedId, setJustArrivedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!episode) return;
+    setJustArrivedId(episode.id);
+    const raf = requestAnimationFrame(() => {
+      document.querySelectorAll<HTMLElement>(`[data-episode-id="${episode.id}"]`).forEach(el => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+    const t = setTimeout(() => setJustArrivedId(null), 1400);
+    return () => { cancelAnimationFrame(raf); clearTimeout(t); };
+  }, [episode]);
+
   // ── Smooth oto-geçiş overlay ────────────────────────────────────────────────
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [overlayOpacity, setOverlayOpacity] = useState(0);
@@ -90,6 +106,13 @@ export default function WatchPage() {
   const springTransition = 'all 0.75s cubic-bezier(0.22, 1, 0.36, 1)';
 
   // ── Playlist Panel ──────────────────────────────────────────────────────────
+  // NOT: Bilerek JSX component tag'ı (<PlaylistContent />) olarak DEĞİL, düz bir
+  // fonksiyon olarak çağırıyoruz (aşağıda PlaylistContent({...}) şeklinde).
+  // Bu fonksiyon WatchPage'in içinde tanımlı olduğu için her render'da yeni bir
+  // referans üretiyor; eğer JSX tag'ı olarak kullanılsaydı React onu her seferinde
+  // FARKLI bir component type sanıp altındaki tüm DOM'u (toggle dahil) söküp
+  // yeniden kurardı — bu da state değişince (ör. autoPlayNext) transition'ların
+  // hiç çalışmayıp direkt son konuma "zıplamasına" sebep oluyordu.
   const PlaylistContent = ({ isDrawer = false }: { isDrawer?: boolean }) => (
     <div className="flex flex-col h-full" style={{ background: isDrawer ? 'var(--water-deep)' : 'var(--water-deep)', borderRadius: isDrawer ? 0 : '1rem', border: isDrawer ? 'none' : '1px solid var(--border-soft)', overflow: 'hidden' }}>
 
@@ -120,22 +143,28 @@ export default function WatchPage() {
           {/* Auto-play toggle */}
           <button
             onClick={() => setAutoPlayNext(!autoPlayNext)}
-            className="shrink-0 flex flex-col justify-center items-center px-3 py-1.5 rounded-lg transition-all"
-            style={{
-              background: autoPlayNext ? 'rgba(74,158,202,0.08)' : 'var(--water-mid)',
-              border: `1px solid ${autoPlayNext ? 'rgba(74,158,202,0.3)' : 'var(--border-soft)'}`,
-            }}
+            role="switch"
+            aria-checked={autoPlayNext}
+            className="shrink-0 flex flex-col justify-center items-center px-1 py-1 rounded-lg bg-transparent border-0"
           >
-            <span className="avatar-title text-[9px] font-bold uppercase tracking-wider mb-1.5" style={{ color: autoPlayNext ? 'var(--water-light)' : 'var(--stone)' }}>
+            <span className="avatar-title text-[9px] font-bold uppercase tracking-wider mb-1.5 transition-colors duration-200" style={{ color: autoPlayNext ? 'var(--water-light)' : 'var(--stone)' }}>
               Oto Geçiş
             </span>
-            <div className="relative w-10 h-5 rounded-full transition-colors duration-300" style={{ background: autoPlayNext ? 'var(--water-light)' : 'rgba(74,158,202,0.15)' }}>
+            <div
+              className="relative w-11 h-6 rounded-full shrink-0"
+              style={{
+                background: autoPlayNext ? 'var(--water-light)' : 'rgba(120,140,160,0.28)',
+                transition: 'background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
               <div
-                className="absolute top-0.5 w-4 h-4 rounded-full shadow-md"
+                className="absolute top-[2px] left-[2px] w-5 h-5 rounded-full"
                 style={{
-                  left: autoPlayNext ? 'calc(100% - 18px)' : '2px',
-                  background: 'var(--parchment)',
-                  transition: 'left 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transform: autoPlayNext ? 'translateX(20px)' : 'translateX(0px)',
+                  background: '#fff',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.35), 0 1px 1px rgba(0,0,0,0.2)',
+                  transition: 'transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  willChange: 'transform',
                 }}
               />
             </div>
@@ -154,12 +183,14 @@ export default function WatchPage() {
           return (
             <button
               key={ep.id}
+              data-episode-id={ep.id}
               onClick={() => navigate(`/watch/${ep.season}/${ep.episode}`)}
-              className="w-full group flex gap-3 p-2.5 rounded-xl transition-all text-left"
+              className={`w-full group flex gap-3 p-2.5 rounded-xl transition-all text-left ${isCurrent && justArrivedId === ep.id ? 'playlist-just-arrived' : ''}`}
               style={{
                 background: isCurrent ? `${epColor}12` : 'transparent',
                 border: `1px solid ${isCurrent ? `${epColor}44` : 'transparent'}`,
                 boxShadow: isCurrent ? `0 0 12px ${epColor}18` : 'none',
+                ['--pulse-color' as any]: epColor,
               }}
               onMouseEnter={e => { if (!isCurrent) (e.currentTarget.style.background = 'rgba(74,158,202,0.05)' ) }}
               onMouseLeave={e => { if (!isCurrent) (e.currentTarget.style.background = 'transparent' ) }}
@@ -386,9 +417,17 @@ export default function WatchPage() {
                 boxShadow: mode === 'sinematik' ? `0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--border-soft)` : 'none',
                 aspectRatio: '16 / 9',
                 transition: springTransition,
+                ['--player-accent' as any]: elementColor,
               }}
             >
-              <div className="absolute inset-0 w-full h-full bg-black">
+              <div
+                className="absolute inset-0 w-full h-full bg-black"
+                style={{
+                  transform: `scale(${1 - overlayOpacity * 0.04})`,
+                  filter: overlayOpacity ? `blur(${overlayOpacity * 4}px)` : 'blur(0px)',
+                  transition: `transform ${overlayOpacity ? FADE_OUT_MS : FADE_IN_MS}ms cubic-bezier(0.4, 0, 0.2, 1), filter ${overlayOpacity ? FADE_OUT_MS : FADE_IN_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+                }}
+              >
                 <VideoPlayer key={episode.id} episode={episode} onGoNext={smoothNavigateToNext} />
               </div>
             </div>
@@ -493,7 +532,7 @@ export default function WatchPage() {
           style={{ width: mode === 'normal' ? '380px' : '0px', opacity: mode === 'normal' ? 1 : 0, transition: layoutTransition }}
         >
           <div className="w-[380px]">
-            <PlaylistContent />
+            {PlaylistContent({})}
           </div>
         </div>
       </div>
@@ -509,7 +548,7 @@ export default function WatchPage() {
           transition: springTransition,
         }}
       >
-        <PlaylistContent isDrawer />
+        {PlaylistContent({ isDrawer: true })}
       </div>
     </div>
   );

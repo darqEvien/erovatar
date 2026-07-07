@@ -285,7 +285,7 @@ export default function ProfilePage() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen w-full font-sans relative pt-24 pb-16 px-4" style={{ background: 'var(--night)', color: 'var(--parchment)' }}>
-      <div className="absolute inset-0 z-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
+    
       {/* Su elementi ışıltısı — HomePage/WatchPage ile aynı atmosfer */}
       <div className="absolute top-0 right-0 w-2/3 h-[60vh] pointer-events-none" style={{ background: 'radial-gradient(ellipse at top right, rgba(74,158,202,0.12) 0%, transparent 60%)' }} />
 
@@ -306,9 +306,8 @@ export default function ProfilePage() {
 
           <div className="h-20 relative overflow-hidden">
             {/* Üç element (su/toprak/ateş) — kişisel profil tek bir kitaba ait olmadığı için hepsini temsil eder */}
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, var(--element-water) 0%, var(--element-earth) 50%, var(--element-fire) 100%)', opacity: 0.22 }} />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent, var(--water-mid))' }} />
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-10" />
+      
+           
           </div>
 
           <div className="px-6 sm:px-10 pb-6 -mt-10 flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
@@ -595,6 +594,7 @@ export default function ProfilePage() {
         )}
 
       </div>
+      
     </div>
   );
 }

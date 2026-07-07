@@ -88,7 +88,7 @@ function attachScrubThumbnailPreview(player: Player, rootEl: HTMLElement, cues: 
   const frame = document.createElement('div');
   Object.assign(frame.style, {
     borderRadius: '8px',
-    border: '2px solid var(--water-light)',
+    border: '2px solid var(--player-accent, var(--water-light))',
     boxShadow: '0 10px 28px rgba(0,0,0,0.65)',
     backgroundColor: '#000',
     backgroundRepeat: 'no-repeat',
@@ -170,7 +170,7 @@ export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPl
   const videoRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<Player | null>(null);
   const saveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { user, subtitleLanguage, autoPlayNext } = useStore();
+  const { user, subtitleLanguage, autoPlayNext, subtitleSettings } = useStore();
   const { saveProgress, getProgress, loading } = useFirebaseProgress();
 
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -206,6 +206,21 @@ export default function VideoPlayer({ episode, mini = false, onGoNext }: VideoPl
       t.mode = t.language === subtitleLanguage ? 'showing' : 'disabled';
     }
   }, [subtitleLanguage]);
+
+  // ── Altyazı görsel ayarları (yazı boyutu/renk/arkaplan vb.) değişince ──────
+  // Örn. Firebase'den tercih geç yüklendiğinde, hâlihazırda çalışan player'a uygula.
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player || player.isDisposed()) return;
+    const tts = (player as any).textTrackSettings;
+    if (!tts || !subtitleSettings || !Object.keys(subtitleSettings).length) return;
+    try {
+      tts.setValues(subtitleSettings);
+      tts.updateDisplay();
+    } catch (err) {
+      console.warn('Altyazı ayarları uygulanamadı:', err);
+    }
+  }, [subtitleSettings]);
 
   // ── Next episode countdown ─────────────────────────────────────────────────
   const goToNextEpisode = useCallback(() => {
@@ -247,6 +262,10 @@ const playerOptions = {
   fill: true,
   liveui: false,
   preload: 'auto',
+  // SVG ikonlar: eski, bulanık icon-font yerine keskin, currentColor ile
+  // temalandırılabilen modern ikonlar (video.js 8'de opt-in bir özellik).
+  experimentalSvgIcons: true,
+  persistTextTrackSettings: true,
 
 playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
   html5: {
@@ -266,7 +285,11 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
         controlBar: {
           pictureInPictureToggle: false,
           fullscreenToggle: false,
-          volumePanel: { inline: false },
+          // NOT: dikey popup (inline:false) sabit em ofsetlerle konumlanıyor ve
+          // farklı control-bar boyutlarında (özellikle mini player'da) ekranın
+          // üst kısmında asılı kalıyordu. Ana player'la aynı yatay/inline
+          // kaydırıcıya geçerek bu konumlanma sorununu kökten ortadan kaldırıyoruz.
+          volumePanel: { inline: true },
           playToggle: true,
           currentTimeDisplay: true,
           timeDivider: true,
@@ -279,6 +302,37 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
 
     const player = (videojs as any)(videoElement, playerOptions);
     playerRef.current = player;
+
+    // ── Altyazı görsel ayarları: kayıtlı tercihi uygula + değişince Firebase'e kaydet ──
+    // video.js bu ayarları kendi localStorage anahtarında tutar ('vjs-text-track-settings')
+    // ama biz Firebase'den gelen değeri store'dan doğrudan basıyoruz — böylece yeni bir
+    // cihazda/tarayıcıda localStorage boş olsa bile kullanıcının tercihi anında uygulanır.
+    const tts = (player as any).textTrackSettings;
+    if (tts) {
+      const savedSettings = useStore.getState().subtitleSettings;
+      if (savedSettings && Object.keys(savedSettings).length) {
+        try {
+          tts.setValues(savedSettings);
+          tts.updateDisplay();
+        } catch (err) {
+          console.warn('Altyazı ayarları uygulanamadı:', err);
+        }
+      }
+
+      // "Altyazı Ayarları" modalı kapanınca (Uygula / X / dışına tıklama / Sıfırla + kapat)
+      // video.js zaten güncel değerleri kendi localStorage'ına yazıyor; biz aynı anda
+      // Firebase'e de yazarak diğer cihazlarda da aynı tercihin görünmesini sağlıyoruz.
+      const originalClose = tts.close.bind(tts);
+      tts.close = (...args: unknown[]) => {
+        originalClose(...args);
+        try {
+          const values = tts.getValues();
+          useStore.getState().setSubtitleSettings(values);
+        } catch (err) {
+          console.warn('Altyazı ayarları kaydedilemedi:', err);
+        }
+      };
+    }
 
     let isDisposing = false;
 
@@ -494,7 +548,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center" style={{ background: 'var(--night)' }}>
-        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--water-light)', borderTopColor: 'transparent' }} />
+        <div className="w-10 h-10 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: 'var(--player-accent, var(--water-light))', borderTopColor: 'transparent' }} />
       </div>
     );
   }
@@ -545,7 +599,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
                   <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(74,158,202,0.15)" strokeWidth="3" />
                   <circle
                     cx="18" cy="18" r="16" fill="none"
-                    stroke="var(--water-light)"
+                    stroke="var(--player-accent, var(--water-light))"
                     strokeWidth="3"
                     strokeDasharray="100"
                     strokeDashoffset={100 - countdown * 20}
@@ -562,7 +616,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
                 <span className="avatar-title text-sm font-bold leading-tight block group-hover:text-white transition-colors" style={{ color: 'var(--parchment)' }}>
                   {nextEpisode.title}
                 </span>
-                <span className="avatar-title text-[10px] font-bold uppercase tracking-wider mt-1 block" style={{ color: 'var(--water-light)' }}>
+                <span className="avatar-title text-[10px] font-bold uppercase tracking-wider mt-1 block" style={{ color: 'var(--player-accent, var(--water-light))' }}>
                   Hemen Geç →
                 </span>
               </div>

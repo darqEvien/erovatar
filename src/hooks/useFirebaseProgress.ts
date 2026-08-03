@@ -158,20 +158,7 @@ export function useFirebaseProgress() {
     // ilerleme çubuğu/tamamlandı işareti bir anlığına bile geriye gidip görünmesin.
     // Gerçek en yüksek ilerleme zaten Firestore'da güvende (aşağıdaki debounce'lı
     // yazımda da aynı kural var); burada da aynı kuralı yerelde uyguluyoruz.
-    setAllProgress((prev) => {
-      const existing = prev[episodeId];
-      if (existing && existing.percentage >= percentage && existing.completed) {
-        // Zaten daha ileri bir noktaya ulaşılmış ve tamamlanmış — geri sarma
-        // bunu bozmasın, mevcut (daha yüksek) kaydı koru.
-        return prev;
-      }
-      if (existing && existing.percentage >= percentage) {
-        // Tamamlanmamış ama daha yüksek bir ilerleme var — geri sarmayla
-        // düşürülmesin, sadece "son izlenme" zamanını güncelleyelim.
-        return { ...prev, [episodeId]: { ...existing, lastWatched: progressData.lastWatched } };
-      }
-      return { ...prev, [episodeId]: progressData };
-    });
+   setAllProgress((prev) => ({ ...prev, [episodeId]: progressData }));
 
     // Firebase'e yazmayı debounce et — seek patlamasını önler
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -185,11 +172,14 @@ export function useFirebaseProgress() {
         // okuyup ikisi de yazabilir — sonuncusu kazanır ve diğer cihazın daha
         // ileri ilerlemesi kaybolabilirdi. Transaction bunu Firestore
         // sunucusunda kilitleyerek engeller.
-        await runTransaction(db, async (transaction) => {
+      await runTransaction(db, async (transaction) => {
           const snap = await transaction.get(episodeRef);
           if (snap.exists()) {
             const existing = snap.data() as WatchProgress;
-            if (existing.percentage >= percentage) return; // daha ileri bir kayıt var, dokunma
+            // "İzlendi" olarak işaretlenmiş bir kaydın üzerine, elimizdeki bu
+            // (muhtemelen bayat) yazım hiçbir zaman yazmasın — ama tamamlanmamışsa
+            // gerçek geri sarma/rewatch senaryosunu artık serbest bırakıyoruz.
+            if (existing.completed && !forceCompleted) return;
           }
           // lastWatched'ı cihazın kendi saati yerine Firebase sunucu saatiyle
           // yazıyoruz — telefon/bilgisayar saat farkı "en son izlenen" sırasını

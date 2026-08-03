@@ -217,7 +217,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
         graceWatchedRef.current = 0;
         lastGraceTimeRef.current = seconds;
         player.currentTime(Math.max(0, seconds));
-        player.play().catch(() => {});
+player.play()?.catch(() => {});
       }
     },
     getCurrentTime: () => {
@@ -336,10 +336,6 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
         controlBar: {
           pictureInPictureToggle: false,
           fullscreenToggle: false,
-          // NOT: dikey popup (inline:false) sabit em ofsetlerle konumlanıyor ve
-          // farklı control-bar boyutlarında (özellikle mini player'da) ekranın
-          // üst kısmında asılı kalıyordu. Ana player'la aynı yatay/inline
-          // kaydırıcıya geçerek bu konumlanma sorununu kökten ortadan kaldırıyoruz.
           volumePanel: { inline: true },
           playToggle: true,
           currentTimeDisplay: true,
@@ -354,10 +350,7 @@ playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
     const player = (videojs as any)(videoElement, playerOptions);
     playerRef.current = player;
 
-    // ── Altyazı görsel ayarları: kayıtlı tercihi uygula + değişince Firebase'e kaydet ──
-    // video.js bu ayarları kendi localStorage anahtarında tutar ('vjs-text-track-settings')
-    // ama biz Firebase'den gelen değeri store'dan doğrudan basıyoruz — böylece yeni bir
-    // cihazda/tarayıcıda localStorage boş olsa bile kullanıcının tercihi anında uygulanır.
+
     const tts = (player as any).textTrackSettings;
     if (tts) {
       const savedSettings = useStore.getState().subtitleSettings;
